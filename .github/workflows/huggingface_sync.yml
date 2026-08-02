@@ -1,0 +1,35 @@
+name: Sync to Hugging Face Spaces
+
+on:
+  push:
+    branches: [ "main" ] # GitHub'da kullandığınız ana dal (branch) adı "master" ise burayı master yapın.
+  workflow_dispatch:
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to Hugging Face Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }} # GitHub Repository Secrets kısmına HF_TOKEN adında Hugging Face 'Write' türü token eklemelisiniz (Hugging Face Profile > Settings > Access Tokens > New Token > Write).
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          # Space URL: https://qwatro-afk-mc.hf.space/ -> Space ID: qwatro/afk-mc
+          git remote add space https://qwatro:$HF_TOKEN@huggingface.co/spaces/qwatro/afk-mc
+          
+          # Fetch the remote Space main branch to reconcile histories
+          git fetch space main || true
+          
+          # Merge the remote history with ours, resolving conflicts using our version (-X ours)
+          # This incorporates Hugging Face's internal commits (e.g., Space configuration metadata)
+          git merge space/main -m "Merge Hugging Face Space Metadata" --allow-unrelated-histories -X ours || true
+          
+          # Push head back as a clean fast-forward update, avoiding force push "incorrect old value" rejection
+          git push space HEAD:main

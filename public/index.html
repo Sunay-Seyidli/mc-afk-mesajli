@@ -1,0 +1,4910 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft AFK Client v3.0</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --bg-card: #1c2128;
+      --bg-hover: #1f242c;
+      --border: #30363d;
+      --border-hover: #484f58;
+      --text-primary: #c9d1d9;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent: #58a6ff;
+      --accent-hover: #79b8ff;
+      --success: #3fb950;
+      --warning: #d29922;
+      --error: #f85149;
+      --online: #3fb950;
+      --offline: #6e7681;
+      --error-status: #f85149;
+      --connecting: #d29922;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.5);
+      --shadow-sm: 0 2px 12px rgba(0,0,0,0.3);
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .topbar {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #58a6ff, #238636);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 2px 8px rgba(88,166,255,0.3);
+    }
+
+    .logo h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .logo span {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 400;
+    }
+
+    .stats {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-tertiary);
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-size: 0.88rem;
+    }
+
+    .stat-item .icon { font-size: 1.1rem; }
+    .stat-item .value { font-weight: 700; color: var(--accent); font-size: 1rem; }
+    .stat-item .label { color: var(--text-secondary); }
+
+    .page { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hidden { display: none !important; }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-bottom: 20px;
+    }
+
+    .back-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--border-hover);
+      transform: translateX(-4px);
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-primary);
+    }
+
+    .server-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .server-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      transition: var(--transition);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .server-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: var(--border);
+      transition: var(--transition);
+    }
+
+    .server-card:hover {
+      border-color: var(--border-hover);
+      background: var(--bg-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .server-card:hover::before { background: var(--accent); }
+    .server-card.has-online::before { background: var(--online); }
+    .server-card.has-error::before { background: var(--error); }
+    .server-card.has-connecting::before { background: var(--connecting); }
+
+    .server-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      image-rendering: pixelated;
+    }
+
+    .server-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      image-rendering: pixelated;
+    }
+
+    .server-icon .icon-placeholder {
+      font-size: 28px;
+      opacity: 0.4;
+    }
+
+    .server-left-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      width: 64px;
+    }
+
+    .server-bots-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      width: 100%;
+    }
+
+    .bot-name-tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 4px;
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      max-width: 64px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: inherit;
+    }
+
+    .bot-name-tag.status-online {
+      border-color: rgba(46, 204, 113, 0.3);
+      background: rgba(46, 204, 113, 0.05);
+      color: var(--online);
+    }
+    
+    .bot-name-tag.status-connecting {
+      border-color: rgba(241, 196, 15, 0.3);
+      background: rgba(241, 196, 15, 0.05);
+      color: var(--connecting);
+    }
+    
+    .bot-name-tag.status-error {
+      border-color: rgba(231, 76, 60, 0.3);
+      background: rgba(231, 76, 60, 0.05);
+      color: var(--error);
+    }
+
+    .bot-status-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .bot-name-tag.status-online .bot-status-dot {
+      background: var(--online);
+      box-shadow: 0 0 4px var(--online);
+    }
+
+    .bot-name-tag.status-connecting .bot-status-dot {
+      background: var(--connecting);
+      box-shadow: 0 0 4px var(--connecting);
+    }
+
+    .bot-name-tag.status-error .bot-status-dot {
+      background: var(--error);
+      box-shadow: 0 0 4px var(--error);
+    }
+
+    .server-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .server-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .server-motd {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      line-height: 1.4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .server-meta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+
+    .server-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .version-badge {
+      background: rgba(88, 166, 255, 0.12);
+      color: var(--accent);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+
+    .proxy-badge {
+      background: rgba(211, 153, 34, 0.12);
+      color: var(--warning);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+
+    .player-count {
+      text-align: right;
+      flex-shrink: 0;
+      min-width: 100px;
+    }
+
+    .player-count .count {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .player-count .count span {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 1rem;
+    }
+
+    .player-count .label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .server-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .btn-add-bot {
+      background: linear-gradient(135deg, #238636, #2ea043);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 20px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .btn-add-bot:hover {
+      background: linear-gradient(135deg, #2ea043, #3fb950);
+      transform: scale(1.05);
+      box-shadow: 0 4px 16px rgba(46, 160, 67, 0.35);
+    }
+
+    .btn-remove-all {
+      background: rgba(248, 81, 73, 0.1);
+      color: var(--error);
+      border: 1px solid rgba(248, 81, 73, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 10px 16px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .btn-remove-all:hover {
+      background: rgba(248, 81, 73, 0.2);
+      border-color: var(--error);
+    }
+
+    .btn-new-server {
+      background: linear-gradient(135deg, #238636, #2ea043);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 14px 28px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 16px rgba(46, 160, 67, 0.25);
+    }
+
+    .btn-new-server:hover {
+      background: linear-gradient(135deg, #2ea043, #3fb950);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(46, 160, 67, 0.35);
+    }
+
+    .btn-new-server:active {
+      transform: translateY(0);
+    }
+
+    .empty-state .btn-new-server {
+      margin-top: 24px;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      backdrop-filter: blur(6px);
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 90%;
+      max-width: 500px;
+      max-height: 85vh;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      animation: modalSlide 0.25s ease;
+    }
+
+    .modal.wide { max-width: 700px; }
+
+    @keyframes modalSlide {
+      from { opacity: 0; transform: translateY(-20px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: 4px;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+
+    .modal-close:hover { 
+      background: var(--bg-tertiary);
+      color: var(--text-primary); 
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      max-height: 60vh;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      transition: var(--transition);
+      outline: none;
+      font-family: inherit;
+    }
+
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+    }
+
+    .form-group input::placeholder, .form-group textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.5;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .proxy-input-wrapper {
+      position: relative;
+    }
+
+    .proxy-input-wrapper::before {
+      content: "🧦";
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.9rem;
+      opacity: 0.5;
+    }
+
+    .proxy-input-wrapper input {
+      padding-left: 36px;
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #238636, #2ea043);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px 24px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #2ea043, #3fb950);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(46, 160, 67, 0.35);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .panel-title .server-icon {
+      width: 48px;
+      height: 48px;
+    }
+
+    .panel-title h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .panel-title .panel-meta {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .panel-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-panel {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-panel:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--border-hover);
+    }
+
+    .btn-panel.danger {
+      color: var(--error);
+      border-color: rgba(248, 81, 73, 0.3);
+    }
+
+    .btn-panel.danger:hover {
+      background: rgba(248, 81, 73, 0.15);
+      border-color: var(--error);
+    }
+
+    .btn-panel.active {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent);
+      border-color: rgba(88, 166, 255, 0.4);
+    }
+
+    .bots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      gap: 16px;
+    }
+
+    @media (max-width: 480px) {
+      .bots-grid { grid-template-columns: 1fr; }
+    }
+
+    .bot-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: var(--transition);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .bot-card:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow);
+    }
+
+    .bot-card-header {
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
+    }
+
+    .bot-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.online { background: var(--online); box-shadow: 0 0 8px var(--online); }
+    .status-dot.offline { background: var(--offline); animation: none; }
+    .status-dot.error { background: var(--error-status); animation: none; }
+    .status-dot.connecting { background: var(--connecting); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .bot-name {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .bot-meta {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .bot-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-icon {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      width: 34px; height: 34px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      font-size: 0.9rem;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--border-hover);
+    }
+
+    .btn-icon.danger:hover {
+      background: rgba(248, 81, 73, 0.15);
+      color: var(--error);
+      border-color: var(--error);
+    }
+
+    .btn-icon.active {
+      background: rgba(88, 166, 255, 0.2);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* ── Bot Stats Bar ──────────────────────────────────────── */
+    .bot-stats {
+      padding: 8px 16px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: 0.75rem;
+    }
+
+    .bot-stat {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-tertiary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .bot-stat .stat-icon { font-size: 0.85rem; }
+    .bot-stat .stat-value { font-weight: 700; color: var(--accent); font-size: 0.78rem; }
+    .bot-stat .stat-label { color: var(--text-muted); font-size: 0.68rem; }
+    .bot-stat.health .stat-value { color: var(--error); }
+    .bot-stat.food .stat-value { color: var(--warning); }
+    .bot-stat.xp .stat-value { color: #a371f7; }
+
+    /* ── Movement Controls ──────────────────────────────────── */
+    .movement-controls {
+      padding: 10px 16px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+
+    .movement-row {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+    }
+
+    .move-btn {
+      width: 40px;
+      height: 34px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      touch-action: manipulation;
+      -webkit-touch-callout: none;
+    }
+
+    .move-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--border-hover);
+    }
+
+    .move-btn:active, .move-btn.active {
+      background: rgba(88, 166, 255, 0.2);
+      color: var(--accent);
+      border-color: var(--accent);
+      transform: scale(0.95);
+    }
+
+    .move-btn.wide { width: 84px; font-size: 0.75rem; }
+
+    .toggle-mine.mining-on {
+      background: linear-gradient(135deg, #6e3a2a, #9b4e30) !important;
+      border-color: #c06030 !important;
+      color: #ffb380 !important;
+      box-shadow: 0 0 8px rgba(192,96,48,0.4);
+    }
+
+    .look-pad-wrapper {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .look-pad-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .look-pad {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: crosshair;
+      touch-action: none;
+      display: block;
+    }
+
+    .look-pad:active { border-color: var(--accent); }
+
+    .muted-btn { opacity: 0.45; }
+
+    .btn-script-stop {
+      background: rgba(248, 81, 73, 0.15) !important;
+      color: var(--error) !important;
+      border-color: rgba(248, 81, 73, 0.3) !important;
+    }
+    .btn-script-stop:hover {
+      background: rgba(248, 81, 73, 0.3) !important;
+    }
+
+    /* ── Inventory ───────────────────────────────────────── */
+    .inv-grid {
+      display: grid;
+      gap: 3px;
+    }
+
+    .inv-slot {
+      width: 38px;
+      height: 38px;
+      background: var(--bg-tertiary);
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.15s;
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      flex-direction: column;
+    }
+
+    .inv-slot:hover { border-color: var(--accent); }
+    .inv-slot.selected { border-color: var(--accent); background: rgba(88,166,255,0.12); }
+    .inv-slot.hotbar-active { border-color: var(--warning); }
+
+    .inv-slot .slot-name {
+      font-size: 0.45rem;
+      max-width: 36px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .inv-slot .slot-count {
+      position: absolute;
+      bottom: 1px;
+      right: 2px;
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .inv-slot .slot-icon {
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .inv-item-action {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .inv-action-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: left;
+    }
+
+    .inv-action-btn:hover { background: var(--bg-hover); border-color: var(--accent); }
+
+    .move-label {
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 3px;
+    }
+
+    .bot-console {
+      height: 180px;
+      overflow-y: auto;
+      padding: 12px 16px;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      background: #0a0c10;
+    }
+
+    .bot-console::-webkit-scrollbar { width: 6px; }
+    .bot-console::-webkit-scrollbar-track { background: transparent; }
+    .bot-console::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .console-line {
+      padding: 2px 0;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    .console-line .timestamp {
+      color: var(--text-muted);
+      margin-right: 8px;
+      user-select: none;
+    }
+
+    .console-line.chat { color: #e6edf3; font-weight: 500; }
+    .console-line.whisper { color: #d2a8ff; font-weight: 500; }
+    .console-line.system { color: #58a6ff; font-weight: 600; }
+    .console-line.error { color: #f85149; font-weight: 600; }
+    .console-line.self { color: #3fb950; font-style: italic; font-weight: 500; }
+    .console-line.info { color: #8b949e; }
+
+    .bot-controls {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-secondary);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .bot-controls input {
+      flex: 1;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .bot-controls input:focus { border-color: var(--accent); }
+
+    .btn-send {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-send:hover { background: var(--accent-hover); }
+
+    /* ── Script Panel ─────────────────────────────────────── */
+    .script-panel {
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      display: none;
+    }
+
+    .script-panel.active { display: block; }
+
+    .script-editor {
+      width: 100%;
+      min-height: 120px;
+      background: #0a0c10;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      color: var(--text-primary);
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      resize: vertical;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .script-editor:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+    }
+
+    .script-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .btn-script {
+      flex: 1;
+      background: linear-gradient(135deg, #238636, #2ea043);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-script:hover {
+      background: linear-gradient(135deg, #2ea043, #3fb950);
+      transform: translateY(-1px);
+    }
+
+    .btn-script-clear {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-script-clear:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .script-presets {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .script-preset {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .script-preset:hover {
+      background: var(--bg-hover);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .player-list {
+      list-style: none;
+    }
+
+    .player-item {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+
+    .player-item:hover { background: var(--bg-tertiary); }
+    .player-item:last-child { border-bottom: none; }
+
+    .player-item .ping {
+      margin-left: auto;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 4px;
+    }
+
+    .player-item .ping.good { color: var(--success); background: rgba(63, 185, 80, 0.1); }
+    .player-item .ping.medium { color: var(--warning); background: rgba(210, 153, 34, 0.1); }
+    .player-item .ping.bad { color: var(--error); background: rgba(248, 81, 73, 0.1); }
+
+    .toast-container {
+      position: fixed;
+      top: 90px;
+      right: 28px;
+      z-index: 1001;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-weight: 600;
+      animation: slideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      max-width: 360px;
+      word-break: break-word;
+      border: 1px solid transparent;
+      backdrop-filter: blur(10px);
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%) scale(0.9); opacity: 0; }
+      to { transform: translateX(0) scale(1); opacity: 1; }
+    }
+
+    .toast.success {
+      background: rgba(46, 160, 67, 0.12);
+      color: var(--success);
+      border-color: rgba(46, 160, 67, 0.25);
+    }
+
+    .toast.error {
+      background: rgba(248, 81, 73, 0.12);
+      color: var(--error);
+      border-color: rgba(248, 81, 73, 0.25);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state .icon {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      opacity: 0.4;
+    }
+
+    .empty-state h3 {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .empty-state p {
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      .topbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 14px 16px !important;
+      }
+      
+      .topbar .logo {
+        justify-content: center;
+        text-align: center;
+      }
+      
+      .topbar h1 {
+        font-size: 1.2rem !important;
+      }
+      
+      .topbar span {
+        font-size: 0.72rem !important;
+      }
+
+      .stats {
+        width: 100% !important;
+        justify-content: center !important;
+        display: flex;
+        gap: 10px;
+        flex-wrap: nowrap !important;
+      }
+      
+      .stat-item {
+        flex: 1;
+        justify-content: center;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+      }
+
+      .container { padding: 12px 14px; }
+
+      .server-card {
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px !important;
+        padding: 14px 16px !important;
+      }
+      
+      .server-icon {
+        width: 48px !important;
+        height: 48px !important;
+      }
+      
+      .server-icon .icon-placeholder {
+        font-size: 20px !important;
+      }
+
+      .server-left-area {
+        width: 48px !important;
+        gap: 4px !important;
+      }
+
+      .bot-name-tag {
+        max-width: 48px !important;
+        font-size: 0.58rem !important;
+        padding: 0px 2px !important;
+        border-radius: 3px !important;
+      }
+      
+      .server-info {
+        flex: 1;
+        min-width: 180px;
+        margin-right: 0;
+      }
+      
+      .server-motd {
+        white-space: normal !important;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 6px;
+      }
+
+      .player-count {
+        width: auto !important;
+        text-align: right !important;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+      
+      .player-count .count {
+        font-size: 1.1rem !important;
+      }
+
+      .server-actions {
+        width: 100% !important;
+        display: flex;
+        gap: 8px;
+        margin-top: 4px;
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+      }
+
+      .btn-add-bot, .btn-remove-all {
+        margin: 0 !important;
+        padding: 8px 16px !important;
+        font-size: 0.8rem !important;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .form-row { grid-template-columns: 1fr; }
+
+      .panel-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 16px !important;
+      }
+
+      .panel-actions {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      
+      .btn-panel {
+        justify-content: center;
+        padding: 10px !important;
+        font-size: 0.82rem !important;
+        width: 100%;
+      }
+
+      .bots-grid { grid-template-columns: 1fr !important; }
+
+      /* Bot Card Mobile Optimization */
+      .bot-card-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px;
+        padding: 12px 14px;
+      }
+      
+      .bot-actions {
+        justify-content: space-between !important;
+        width: 100% !important;
+        gap: 4px !important;
+      }
+      
+      .btn-icon {
+        flex: 1;
+        max-width: none !important;
+        height: 38px !important;
+        font-size: 1rem !important;
+      }
+      
+      .bot-stats {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px !important;
+        padding: 10px 14px !important;
+      }
+      
+      .bot-stat {
+        justify-content: center;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 6px !important;
+      }
+
+      .movement-row {
+        width: 100% !important;
+      }
+      
+      .movement-row .move-btn.wide {
+        flex: 1;
+        width: auto !important;
+        font-size: 0.7rem !important;
+        padding: 0 2px !important;
+      }
+
+      /* Inventory Mobile Optimization */
+      .inv-slot {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 0.5rem !important;
+      }
+      
+      .inv-slot .slot-name {
+        display: none !important;
+      }
+      
+      .inv-slot .slot-icon {
+        font-size: 1rem !important;
+      }
+      
+      #modal-inventory .modal-body {
+        padding: 16px !important;
+      }
+      
+      #modal-inventory div[style*="display:flex;gap:16px"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+      }
+      
+      #inv-item-detail {
+        min-height: auto !important;
+        flex: none !important;
+        width: 100% !important;
+      }
+    }
+
+    /* ── ADDON TABS SYSTEM ── */
+    .bot-addon-tabs {
+      display: flex;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+    .addon-tab {
+      flex: 1;
+      padding: 10px 4px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      font-size: 0.72rem;
+    }
+    .addon-tab:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .addon-tab.active {
+      color: var(--accent);
+      background: rgba(88, 166, 255, 0.04);
+      border-bottom-color: var(--accent);
+    }
+    .addon-pane {
+      width: 100%;
+      display: block;
+    }
+    .addon-pane.hidden {
+      display: none !important;
+    }
+
+    /* ── 2D LIVE RADAR PANELS ── */
+    .radar-pane-wrapper {
+      background: #0d1117;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .radar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .radar-coords {
+      font-family: monospace;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .radar-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .radar-zoom-btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 0.7rem;
+      transition: background 0.1s;
+    }
+    .radar-zoom-btn:hover {
+      background: #30363d;
+    }
+    .zoom-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      min-width: 28px;
+      text-align: center;
+    }
+    .radar-north-tag {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #ff7b72;
+      text-shadow: 0 0 4px rgba(0,0,0,0.8);
+      pointer-events: none;
+    }
+    .radar-legend {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin-top: 10px;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .legend-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .legend-dot.self { background: #58a6ff; }
+    .legend-dot.player { background: #388bfd; }
+    .legend-dot.mob-hostile { background: #f85149; }
+    .legend-dot.mob-passive { background: #ffea7f; }
+
+    /* ── LIVE INVENTORY VISUALIZER ── */
+    .live-inventory-pane {
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .inventory-top-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .armor-slots {
+      display: flex;
+      gap: 4px;
+    }
+    .inventory-stats {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+    .held-item-info {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--accent);
+    }
+    .inventory-section-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+    .live-inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 4px;
+    }
+    .live-inventory-hotbar {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 4px;
+      padding-top: 4px;
+      border-top: 1px dashed var(--border);
+    }
+    .live-inv-slot {
+      aspect-ratio: 1;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.1s;
+    }
+    .live-inv-slot:hover {
+      background: #161b22;
+      border-color: var(--accent);
+      transform: scale(1.05);
+    }
+    .live-inv-slot.selected {
+      background: rgba(88, 166, 255, 0.1);
+      border-color: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+    }
+    .live-inv-slot.hotbar-active {
+      box-shadow: inset 0 0 0 2px var(--warning);
+      border-color: var(--warning);
+    }
+    .live-slot-icon {
+      font-size: 1.25rem;
+    }
+    .live-slot-count {
+      position: absolute;
+      bottom: 1px;
+      right: 3px;
+      font-size: 0.65rem;
+      font-weight: bold;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 0 3px;
+      border-radius: 3px;
+      line-height: 1.1;
+    }
+    .btn-panel-action {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 0.65rem;
+      transition: background 0.1s;
+    }
+    .btn-panel-action:hover {
+      background: #30363d;
+    }
+    .live-inv-item-detail {
+      margin-top: 6px;
+      min-height: 40px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-icon">⛏️</div>
+      <div>
+        <h1>Minecraft AFK Client</h1>
+        <span>v3.0.0 • Bot Kontrol + Script + Hareket</span>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="icon">🧠</span>
+        <span class="label">RAM</span>
+        <span class="value" id="ram-usage">-</span>
+        <span class="label">MB</span>
+      </div>
+      <div class="stat-item">
+        <span class="icon">🤖</span>
+        <span class="label">Bot</span>
+        <span class="value" id="bot-count">0</span>
+        <span class="label">/</span>
+        <span class="value" id="bot-limit">-</span>
+      </div>
+    </div>
+    <div id="offline-badge" style="display:none; background: var(--warning); color: #000; padding: 6px 14px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 700; margin-left: auto;">
+      ⚠️ Çevrimdışı Mod
+    </div>
+  </header>
+
+  <main class="container page" id="page-server-browser">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+      <h2 class="section-title" style="margin-bottom:0;">🌐 Sunucu Listesi</h2>
+      <button class="btn-new-server" id="btn-new-server">
+        <span>➕</span> Yeni Sunucu Ekle
+      </button>
+    </div>
+
+    <div id="server-list" class="server-list"></div>
+
+    <div id="server-empty" class="empty-state" style="display:none">
+      <div class="icon">🌐</div>
+      <h3>Henüz sunucu yok</h3>
+      <p>Bot eklediğinizde sunucular burada görünecek.</p>
+      <button class="btn-new-server" id="btn-new-server-empty">
+        <span>➕</span> Yeni Sunucu Ekle
+      </button>
+    </div>
+  </main>
+
+  <main class="container page hidden" id="page-bot-panel">
+    <button class="back-btn" id="btn-back">
+      <span>←</span> Sunucu Listesine Dön
+    </button>
+
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="server-icon" id="panel-icon">
+          <span class="icon-placeholder">🖥️</span>
+        </div>
+        <div>
+          <h2 id="panel-server-name">Sunucu Adı</h2>
+          <div class="panel-meta">
+            <span id="panel-server-ip">ip:port</span>
+            <span>•</span>
+            <span id="panel-version">1.20.1</span>
+            <span id="panel-proxy-badge" class="proxy-badge" style="display:none">🧦 SOCKS5</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn-panel" id="btn-panel-add-bot">
+          <span>➕</span> Bot Ekle
+        </button>
+        <button class="btn-panel" id="btn-panel-antiafk-all">
+          <span>🛡️</span> Tüm Anti-AFK
+        </button>
+        <button class="btn-panel" id="btn-panel-broadcast">
+          <span>📢</span> Toplu Mesaj
+        </button>
+        <button class="btn-panel danger" id="btn-panel-remove-all">
+          <span>🗑️</span> Tümünü Çıkar
+        </button>
+      </div>
+    </div>
+
+    <div id="bots-container" class="bots-grid"></div>
+
+    <div id="panel-empty" class="empty-state" style="display:none">
+      <div class="icon">🤖</div>
+      <h3>Bu sunucuda bot yok</h3>
+      <p>Yukarıdaki "Bot Ekle" butonundan yeni bot ekleyin.</p>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="modal-add-bot">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><span>➕</span> <span id="modal-title">Yeni Sunucu Ekle</span></h3>
+        <button class="modal-close" id="modal-add-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Sunucu IP</label>
+          <input type="text" id="modal-server-ip" placeholder="play.example.com">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Port</label>
+            <input type="number" id="modal-server-port" value="25565">
+          </div>
+          <div class="form-group">
+            <label>Sürüm</label>
+            <select id="modal-bot-version">
+              <!-- Java 25 Sürümleri (Yeni İsimlendirme Formatı) -->
+              <optgroup label="Java 25 Sürümleri (Tiny Takeover & Snapshotlar)">
+                <option value="26.2">26.2 (Chaos Cubed - Snapshot)</option>
+                <option value="26.1.2">26.1.2</option>
+                <option value="26.1.1">26.1.1</option>
+                <option value="26.1">26.1 (Tiny Takeover)</option>
+              </optgroup>
+              <!-- Java 21 Sürümleri -->
+              <optgroup label="Java 21 Sürümleri">
+                <option value="1.21.4">1.21.4</option>
+                <option value="1.21.3">1.21.3</option>
+                <option value="1.21.2">1.21.2</option>
+                <option value="1.21.1">1.21.1</option>
+                <option value="1.21">1.21</option>
+                <option value="1.20.6">1.20.6</option>
+                <option value="1.20.5">1.20.5</option>
+              </optgroup>
+              <!-- Java 17 Sürümleri -->
+              <optgroup label="Java 17 Sürümleri">
+                <option value="1.20.4">1.20.4</option>
+                <option value="1.20.3">1.20.3</option>
+                <option value="1.20.2">1.20.2</option>
+                <option value="1.20.1" selected>1.20.1</option>
+                <option value="1.20">1.20</option>
+                <option value="1.19.4">1.19.4</option>
+                <option value="1.19.3">1.19.3</option>
+                <option value="1.19.2">1.19.2</option>
+                <option value="1.19.1">1.19.1</option>
+                <option value="1.19">1.19</option>
+                <option value="1.18.2">1.18.2</option>
+                <option value="1.18.1">1.18.1</option>
+                <option value="1.18">1.18</option>
+              </optgroup>
+              <!-- Java 16 Sürümleri -->
+              <optgroup label="Java 16 Sürümleri">
+                <option value="1.17.1">1.17.1</option>
+                <option value="1.17">1.17</option>
+              </optgroup>
+              <!-- Java 8 Sürümleri -->
+              <optgroup label="Java 8 Sürümleri">
+                <option value="1.16.5">1.16.5</option>
+                <option value="1.16.4">1.16.4</option>
+                <option value="1.16.3">1.16.3</option>
+                <option value="1.16.2">1.16.2</option>
+                <option value="1.16.1">1.16.1</option>
+                <option value="1.16">1.16</option>
+                <option value="1.15.2">1.15.2</option>
+                <option value="1.15.1">1.15.1</option>
+                <option value="1.15">1.15</option>
+                <option value="1.14.4">1.14.4</option>
+                <option value="1.14.3">1.14.3</option>
+                <option value="1.14.2">1.14.2</option>
+                <option value="1.14.1">1.14.1</option>
+                <option value="1.14">1.14</option>
+                <option value="1.13.2">1.13.2</option>
+                <option value="1.13.1">1.13.1</option>
+                <option value="1.13">1.13</option>
+                <option value="1.12.2">1.12.2</option>
+                <option value="1.12.1">1.12.1</option>
+                <option value="1.12">1.12</option>
+                <option value="1.11.2">1.11.2</option>
+                <option value="1.11.1">1.11.1</option>
+                <option value="1.11">1.11</option>
+                <option value="1.10.2">1.10.2</option>
+                <option value="1.10.1">1.10.1</option>
+                <option value="1.10">1.10</option>
+                <option value="1.9.4">1.9.4</option>
+                <option value="1.9.3">1.9.3</option>
+                <option value="1.9.2">1.9.2</option>
+                <option value="1.9.1">1.9.1</option>
+                <option value="1.9">1.9</option>
+                <option value="1.8.9">1.8.9</option>
+                <option value="1.8.8">1.8.8</option>
+                <option value="1.8.7">1.8.7</option>
+                <option value="1.8.6">1.8.6</option>
+                <option value="1.8.5">1.8.5</option>
+                <option value="1.8.4">1.8.4</option>
+                <option value="1.8.3">1.8.3</option>
+                <option value="1.8.2">1.8.2</option>
+                <option value="1.8.1">1.8.1</option>
+                <option value="1.8">1.8</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Bot Adları (her satıra bir isim)</label>
+          <textarea id="modal-bot-names" placeholder="AFKBot1&#10;AFKBot2&#10;AFKBot3"></textarea>
+          <div class="hint">Her satıra bir bot adı yazın. Birden fazla bot aynı anda eklenecek.</div>
+        </div>
+        <div class="form-group">
+          <label>SOCKS5 Proxy (opsiyonel)</label>
+          <div class="proxy-input-wrapper">
+            <input type="text" id="modal-proxy" placeholder="ip:port">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Oto Giriş / Yeniden Bağlanma Mesajı (opsiyonel)</label>
+          <textarea id="modal-join-message" rows="2" placeholder="/login 123456&#10;veya Selam millet!"></textarea>
+          <div class="hint">Bot sunucuya girdiğinde ve her yeniden bağlandığında otomatik gönderilecek mesaj.</div>
+        </div>
+        <div class="form-group">
+          <label>Giriş Mesajı Gönderme Gecikmesi (Saniye)</label>
+          <input type="number" id="modal-join-delay" value="3" min="0" max="120" placeholder="3">
+          <div class="hint">Sunucuya katıldıktan kaç saniye sonra bu mesaj gönderilsin?</div>
+        </div>
+        <button class="btn-primary" id="btn-modal-add">
+          <span>🚀</span> Bot(lar)ı Ekle
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-join-settings">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><span>💬</span> <span id="join-modal-title">Oto Giriş Mesaj Ayarları</span></h3>
+        <button class="modal-close" id="modal-join-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Oto Giriş / Yeniden Bağlanma Komut veya Mesajı</label>
+          <textarea id="edit-join-message" rows="3" placeholder="/login sifre123&#10;veya Selamlar!"></textarea>
+          <div class="hint">Sunucuya girdikten / yeniden bağlandıktan sonra otomatik yazılacak mesaj. Birden fazla komut için her satıra bir tane yazın.</div>
+        </div>
+        <div class="form-group">
+          <label>Gecikme Süresi (Saniye)</label>
+          <input type="number" id="edit-join-delay" value="3" min="0" max="120" placeholder="3">
+          <div class="hint">Sunucuya katıldıktan kaç saniye sonra mesajlar gönderilsin?</div>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+          <input type="checkbox" id="edit-join-apply-all" style="width:auto;cursor:pointer;">
+          <label for="edit-join-apply-all" style="margin:0;cursor:pointer;font-weight:normal;font-size:0.85rem;color:var(--text-secondary);">Bu sunucudaki TÜM botlara uygula</label>
+        </div>
+        <button class="btn-primary" id="btn-save-join-settings" style="margin-top:12px;">
+          <span>💾</span> Kaydet
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-broadcast">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><span>📢</span> Toplu Mesaj Gönder</h3>
+        <button class="modal-close" id="modal-broadcast-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Mesaj</label>
+          <input type="text" id="broadcast-message" placeholder="Tüm botlara gönderilecek mesaj...">
+        </div>
+        <button class="btn-primary" id="btn-broadcast-send">
+          <span>📨</span> Gönder
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-players">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><span>👥</span> Çevrimiçi Oyuncular</h3>
+        <button class="modal-close" id="modal-players-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <ul class="player-list" id="player-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-script">
+    <div class="modal wide">
+      <div class="modal-header">
+        <h3><span>📜</span> <span id="script-modal-title">Bot Script</span></h3>
+        <button class="modal-close" id="modal-script-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="script-presets" id="script-presets">
+          <button class="script-preset" data-preset="chat-loop">💬 Mesaj Döngüsü</button>
+          <button class="script-preset" data-preset="auto-chat">🤖 Oto Chat</button>
+          <button class="script-preset" data-preset="look-around">👀 Etrafına Bak</button>
+          <button class="script-preset" data-preset="spam-click">⚔️ Spam Tıkla</button>
+          <button class="script-preset" data-preset="follow-player">🏃 Oyuncu Takip</button>
+          <button class="script-preset" data-preset="auto-eat">🍖 Oto Yemek Ye</button>
+        </div>
+        <div class="form-group">
+          <label>JavaScript Kodu (bot değişkeni hazır)</label>
+          <textarea class="script-editor" id="script-editor" placeholder="// bot.chat('Merhaba!');&#10;// bot.swingArm('right');&#10;// console.log(bot.entity.position);&#10;&#10;// Örnek: Her 3 saniyede mesaj at&#10;setInterval(() => {&#10;  bot.chat('Merhaba dünya!');&#10;}, 3000);"></textarea>
+        </div>
+        <div class="script-actions">
+          <button class="btn-script" id="btn-run-script">
+            <span>▶️</span> Çalıştır
+          </button>
+          <button class="btn-script btn-script-stop" id="btn-stop-script">
+            <span>⏹️</span> Durdur
+          </button>
+          <button class="btn-script btn-script-clear" id="btn-clear-script">
+            <span>🗑️</span> Temizle
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ── Inventory Modal ─────────────────────────────────── -->
+  <div class="modal-overlay" id="modal-inventory">
+    <div class="modal" style="max-width:680px;width:95%">
+      <div class="modal-header">
+        <h3><span>🎒</span> <span id="inv-modal-title">Envanter</span></h3>
+        <button class="modal-close" id="modal-inv-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+          <!-- Left: item detail panel -->
+          <div id="inv-item-detail" style="min-width:160px;flex:0 0 160px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:0.82rem;min-height:180px;">
+            <div style="color:var(--text-muted);margin-bottom:8px;">Bir eşyaya tıkla</div>
+          </div>
+          <!-- Right: inventory grid -->
+          <div style="flex:1;min-width:280px;">
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;">Ekipman (5-8)</div>
+            <div class="inv-grid" id="inv-armor" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px;"></div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;">Envanter (9-35)</div>
+            <div class="inv-grid" id="inv-main" style="grid-template-columns:repeat(9,1fr);margin-bottom:8px;"></div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;">Hızlı Erişim (1-9)</div>
+            <div class="inv-grid" id="inv-hotbar" style="grid-template-columns:repeat(9,1fr);"></div>
+            <button class="btn-script" id="btn-inv-refresh" style="margin-top:10px;width:100%;justify-content:center;">🔄 Yenile</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Socket.IO initialization with fallback for offline/demo mode
+    let socket = null;
+    let isOfflineMode = false;
+
+    try {
+      if (typeof io !== 'undefined' && typeof io === 'function') {
+        socket = io({
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionAttempts: 10,
+          reconnectionDelay: 2000
+        });
+        console.log('[Socket] Bağlantı başlatıldı');
+      } else {
+        throw new Error('Socket.IO library not loaded');
+      }
+    } catch (err) {
+      console.warn('[Socket] Çevrimdışı mod aktif:', err.message);
+      isOfflineMode = true;
+      // Create a mock socket for offline mode
+      socket = {
+        on: (event, handler) => {
+          // Store handlers for potential demo triggers
+          console.log('[Offline] Event listener registered:', event);
+        },
+        emit: (event, data) => {
+          console.log('[Offline] Emit:', event, data);
+          // Simulate responses for demo
+          if (event === 'add-bots-batch') {
+            const { serverIp, port, version, proxy, botNames } = data;
+            addBotsOffline(serverIp, port, version, proxy, botNames);
+          }
+        },
+        connected: false
+      };
+    }
+
+    const state = {
+      bots: new Map(),
+      consoles: new Map(),
+      servers: new Map(),
+      currentServerKey: null,
+      currentPlayerListBot: null,
+      currentScriptBotId: null,
+      currentInventoryBotId: null,
+      antiAfkAllState: false,
+      mutedConsoles: new Set(),   // botId'ler - konsol mesajları gelmesin
+      miningBots: new Set(),      // botId'ler - kaz modu açık
+      selectedInvSlot: null
+    };
+
+    const pages = {
+      browser: document.getElementById('page-server-browser'),
+      panel: document.getElementById('page-bot-panel')
+    };
+
+    const els = {
+      serverList: document.getElementById('server-list'),
+      serverEmpty: document.getElementById('server-empty'),
+      botsContainer: document.getElementById('bots-container'),
+      panelEmpty: document.getElementById('panel-empty'),
+      ramUsage: document.getElementById('ram-usage'),
+      botCount: document.getElementById('bot-count'),
+      botLimit: document.getElementById('bot-limit'),
+      btnBack: document.getElementById('btn-back'),
+      panelServerName: document.getElementById('panel-server-name'),
+      panelServerIp: document.getElementById('panel-server-ip'),
+      panelVersion: document.getElementById('panel-version'),
+      panelProxyBadge: document.getElementById('panel-proxy-badge'),
+      panelIcon: document.getElementById('panel-icon'),
+      btnPanelAddBot: document.getElementById('btn-panel-add-bot'),
+      btnPanelAntiAfk: document.getElementById('btn-panel-antiafk-all'),
+      btnPanelBroadcast: document.getElementById('btn-panel-broadcast'),
+      btnPanelRemoveAll: document.getElementById('btn-panel-remove-all'),
+      toastContainer: document.getElementById('toast-container'),
+      modalAddBot: document.getElementById('modal-add-bot'),
+      modalAddClose: document.getElementById('modal-add-close'),
+      modalServerIp: document.getElementById('modal-server-ip'),
+      modalServerPort: document.getElementById('modal-server-port'),
+      modalBotVersion: document.getElementById('modal-bot-version'),
+      modalBotNames: document.getElementById('modal-bot-names'),
+      modalProxy: document.getElementById('modal-proxy'),
+      modalJoinMessage: document.getElementById('modal-join-message'),
+      modalJoinDelay: document.getElementById('modal-join-delay'),
+      btnModalAdd: document.getElementById('btn-modal-add'),
+      modalBroadcast: document.getElementById('modal-broadcast'),
+      modalBroadcastClose: document.getElementById('modal-broadcast-close'),
+      broadcastMessage: document.getElementById('broadcast-message'),
+      btnBroadcastSend: document.getElementById('btn-broadcast-send'),
+      modalJoinSettings: document.getElementById('modal-join-settings'),
+      modalJoinClose: document.getElementById('modal-join-close'),
+      btnSaveJoinSettings: document.getElementById('btn-save-join-settings'),
+      modalPlayers: document.getElementById('modal-players'),
+      modalPlayersClose: document.getElementById('modal-players-close'),
+      playerList: document.getElementById('player-list'),
+      modalScript: document.getElementById('modal-script'),
+      modalScriptClose: document.getElementById('modal-script-close'),
+      modalInventory: document.getElementById('modal-inventory'),
+      modalInvClose: document.getElementById('modal-inv-close')
+    };
+
+    // ── LocalStorage Sohbet Geçmişi ─────────────────────────────
+    const STORAGE_KEY = 'mc-afk-chat-history';
+
+    function saveMessageToStorage(botId, type, text, timestamp, json = null) {
+      try {
+        const key = `${STORAGE_KEY}-${botId}`;
+        let messages = JSON.parse(localStorage.getItem(key) || '[]');
+        messages.push({ type, text, timestamp, json });
+        if (messages.length > 500) messages = messages.slice(-500);
+        localStorage.setItem(key, JSON.stringify(messages));
+      } catch (e) {
+        console.error('[Storage] Kaydetme hatası:', e);
+      }
+    }
+
+    function loadMessagesFromStorage(botId) {
+      try {
+        if (!botId) return;
+        const key = `${STORAGE_KEY}-${botId}`;
+        const data = localStorage.getItem(key);
+        if (!data) return;
+        const messages = JSON.parse(data);
+        const consoleEl = document.getElementById(`console-${botId}`);
+        if (consoleEl) {
+          consoleEl.innerHTML = '';
+          messages.forEach(m => {
+            const line = document.createElement('div');
+            line.className = `console-line ${m.type}`;
+            const htmlText = getFormattedMinecraftMessage(m.text, m.json);
+            line.innerHTML = `<span class="timestamp">${m.timestamp}</span>${htmlText}`;
+            consoleEl.appendChild(line);
+          });
+          consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+      } catch (e) {
+        console.error('[Storage] Yükleme hatası:', e);
+      }
+    }
+
+    function clearStorageForBot(botId) {
+      try {
+        localStorage.removeItem(`${STORAGE_KEY}-${botId}`);
+      } catch (e) {}
+    }
+
+
+    // ── Çevrimdışı Mod Yardımcıları ───────────────────────────
+    function addBotsOffline(serverIp, port, version, proxy, botNames) {
+      const serverKey = `${serverIp}:${port}`;
+      const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      botNames.forEach((name, idx) => {
+        const botId = 'offline-bot-' + Date.now() + '-' + idx;
+        const bot = {
+          id: botId,
+          name: name,
+          serverIp: serverIp,
+          serverPort: port,
+          serverKey: serverKey,
+          version: version,
+          hasProxy: !!proxy,
+          proxy: proxy || '',
+          status: 'online',
+          antiAfkEnabled: false,
+          x: 0, y: 64, z: 0,
+          health: 20, maxHealth: 20,
+          food: 20, foodSaturation: 0,
+          xp: 0, level: 0
+        };
+        state.bots.set(botId, bot);
+        state.consoles.set(botId, []);
+
+        // Demo mesaj ekle
+        setTimeout(() => {
+          addConsoleMessage(botId, 'system', `${name} sunucuya bağlandı (${serverIp}:${port})`, now);
+          addConsoleMessage(botId, 'info', `Sürüm: ${version} | Proxy: ${proxy || 'Yok'}`, now);
+        }, 300 + idx * 200);
+      });
+
+      updateServersFromBots();
+      renderServerBrowser();
+      if (state.currentServerKey === serverKey) {
+        renderBotPanel();
+      } else if (!state.currentServerKey) {
+        // Otomatik olarak sunucu panelini aç
+        setTimeout(() => openServerPanel(serverKey), 500);
+      }
+    }
+
+    // ── Socket Olayları ────────────────────────────────────────
+
+    // ── Çevrimdışı Mod Yardımcıları ───────────────────────────
+    function addBotsOffline(serverIp, port, version, proxy, botNames) {
+      const serverKey = `${serverIp}:${port}`;
+      const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      botNames.forEach((name, idx) => {
+        const botId = 'offline-bot-' + Date.now() + '-' + idx;
+        const bot = {
+          id: botId,
+          name: name,
+          serverIp: serverIp,
+          serverPort: port,
+          serverKey: serverKey,
+          version: version,
+          hasProxy: !!proxy,
+          proxy: proxy || '',
+          status: 'online',
+          antiAfkEnabled: false,
+          x: 0, y: 64, z: 0,
+          health: 20, maxHealth: 20,
+          food: 20, foodSaturation: 0,
+          xp: 0, level: 0
+        };
+        state.bots.set(botId, bot);
+        state.consoles.set(botId, []);
+
+        // Demo mesaj ekle
+        setTimeout(() => {
+          addConsoleMessage(botId, 'system', `${name} sunucuya bağlandı (${serverIp}:${port})`, now);
+          addConsoleMessage(botId, 'info', `Sürüm: ${version} | Proxy: ${proxy || 'Yok'}`, now);
+        }, 300 + idx * 200);
+      });
+
+      updateServersFromBots();
+      renderServerBrowser();
+      if (state.currentServerKey === serverKey) {
+        renderBotPanel();
+      } else if (!state.currentServerKey) {
+        // Otomatik olarak sunucu panelini aç
+        setTimeout(() => openServerPanel(serverKey), 500);
+      }
+    }
+
+    // ── Socket Olayları ────────────────────────────────────────
+    if (!isOfflineMode && socket && typeof socket.on === 'function') {
+      socket.on('connect', () => {
+        console.log('[Socket] Bağlandı');
+        setTimeout(() => {
+          for (const [botId] of state.bots) {
+            loadMessagesFromStorage(botId);
+          }
+        }, 1000);
+      });
+
+      socket.on('disconnect', () => console.log('[Socket] Bağlantı kesildi'));
+
+      socket.on('ram-usage', (data) => {
+        els.ramUsage.textContent = `${data.usedRamMB} / ${data.totalRamMB}`;
+        els.botCount.textContent = data.botCount;
+        els.botLimit.textContent = data.maxBots;
+      });
+
+      socket.on('bot-update', (bots) => {
+        console.log('[Socket] bot-update:', bots.length, 'bots');
+        const currentIds = new Set(state.bots.keys());
+        const newIds = new Set(bots.map(b => b.id));
+
+        for (const id of currentIds) {
+          if (!newIds.has(id)) {
+            state.bots.delete(id);
+            state.consoles.delete(id);
+          }
+        }
+
+        for (const bot of bots) {
+          const existing = state.bots.get(bot.id);
+          if (existing) {
+            Object.assign(bot, {
+              x: existing.x, y: existing.y, z: existing.z,
+              health: existing.health, maxHealth: existing.maxHealth,
+              food: existing.food, foodSaturation: existing.foodSaturation,
+              xp: existing.xp, level: existing.level
+            });
+          }
+          state.bots.set(bot.id, bot);
+          if (!state.consoles.has(bot.id)) {
+            state.consoles.set(bot.id, []);
+          }
+          if (existing && existing.antiAfkEnabled !== bot.antiAfkEnabled) {
+            updateAntiAfkButton(bot.id, bot.antiAfkEnabled);
+          }
+          if (existing && existing.autoReconnectEnabled !== bot.autoReconnectEnabled) {
+            updateAutoReconnectButton(bot.id, bot.autoReconnectEnabled);
+          }
+        }
+
+        updateServersFromBots();
+        renderServerBrowser();
+        if (state.currentServerKey) {
+          renderBotPanel();
+        }
+      });
+
+      socket.on('bot-stats-update', (bots) => {
+        for (const bot of bots) {
+          state.bots.set(bot.id, { ...state.bots.get(bot.id), ...bot });
+          updateBotStats(bot);
+          drawBotRadar(bot);
+        }
+      });
+
+      socket.on('chat-message', ({ botId, type, text, timestamp, json }) => {
+        addConsoleMessage(botId, type, text, timestamp, json);
+        saveMessageToStorage(botId, type, text, timestamp, json);
+      });
+
+
+
+      socket.on('inventory-data', (data) => {
+        if (!state.botInventories) state.botInventories = new Map();
+        state.botInventories.set(data.botId, data);
+
+        if (state.currentInventoryBotId === data.botId) {
+          renderInventoryModal(data);
+        }
+        renderCardLiveInventory(data);
+
+        // Dispatch a custom event to notify builder tab about inventory changes
+        const card = document.getElementById('card-' + data.botId);
+        if (card) {
+          card.dispatchEvent(new CustomEvent('inventory-changed', { detail: data }));
+        }
+      });
+
+      socket.on('builder-progress', (data) => {
+        const { botId, total, placed, currentBlock, status, message } = data;
+        const progressBox = document.getElementById('builder-progress-' + botId);
+        const progressMsg = document.getElementById('builder-progress-msg-' + botId);
+        const progressPercent = document.getElementById('builder-progress-percent-' + botId);
+        const progressBar = document.getElementById('builder-progress-bar-' + botId);
+        const startBtn = document.getElementById('builder-start-' + botId);
+        const stopBtn = document.getElementById('builder-stop-' + botId);
+
+        if (progressBox && progressMsg && progressPercent && progressBar) {
+          progressBox.classList.remove('hidden');
+          
+          let percent = 0;
+          if (total > 0) percent = Math.round((placed / total) * 100);
+          
+          progressPercent.textContent = percent + '%';
+          progressBar.style.width = percent + '%';
+
+          if (status === 'building') {
+            progressMsg.textContent = `İnşa ediliyor: ${placed}/${total} (${currentBlock || ''})`;
+            if (startBtn) startBtn.classList.add('hidden');
+            if (stopBtn) stopBtn.classList.remove('hidden');
+          } else if (status === 'done') {
+            progressMsg.textContent = `✅ İnşaat tamamlandı! ${total} blok yerleştirildi.`;
+            progressBar.style.background = 'var(--success)';
+            if (startBtn) {
+              startBtn.classList.remove('hidden');
+              startBtn.style.opacity = '1';
+              startBtn.style.cursor = 'pointer';
+            }
+            if (stopBtn) stopBtn.classList.add('hidden');
+            showToast('success', 'İnşaat başarıyla tamamlandı!');
+          } else if (status === 'stopped') {
+            progressMsg.textContent = `⏹️ İnşaat durduruldu. (${placed}/${total})`;
+            if (startBtn) startBtn.classList.remove('hidden');
+            if (stopBtn) stopBtn.classList.add('hidden');
+            showToast('info', 'İnşaat durduruldu.');
+          } else if (status === 'error') {
+            progressMsg.textContent = `❌ Hata: ${message || 'Bilinmeyen Hata'}`;
+            progressBar.style.background = 'var(--error)';
+            if (startBtn) startBtn.classList.remove('hidden');
+            if (stopBtn) stopBtn.classList.add('hidden');
+            showToast('error', 'İnşaat Hatası: ' + message);
+          }
+        }
+      });
+
+      socket.on('player-list', ({ botId, players }) => {
+        if (state.currentPlayerListBot === botId) {
+          showPlayerList(players);
+        }
+      });
+
+      socket.on('system-message', ({ type, text }) => {
+        showToast(type, text);
+      });
+    } else {
+      // Çevrimdışı mod - göstergeyi aktif et ve varsayılan değerleri ayarla
+      const offlineBadge = document.getElementById('offline-badge');
+      if (offlineBadge) offlineBadge.style.display = 'block';
+      els.ramUsage.textContent = '0 / 0';
+      els.botCount.textContent = '0';
+      els.botLimit.textContent = '∞';
+      console.log('[App] Çevrimdışı mod - Socket.IO sunucusu bağlı değil');
+    }
+
+    // ── Sunucu Verisi Yönetimi ─────────────────────────────────
+    function updateServersFromBots() {
+      const activeKeys = new Set();
+
+      for (const bot of state.bots.values()) {
+        const key = bot.serverKey || `${bot.serverIp}:${bot.serverPort}`;
+        if (!key) continue;
+        activeKeys.add(key);
+
+        if (!state.servers.has(key)) {
+          state.servers.set(key, {
+            serverKey: key,
+            serverIp: bot.serverIp,
+            serverPort: bot.serverPort,
+            version: bot.version,
+            hasProxy: bot.hasProxy,
+            proxy: '',
+            bots: [],
+            icon: null,
+            motd: '',
+            onlinePlayers: 0,
+            maxPlayers: 0,
+            status: 'offline',
+            lastFetched: 0
+          });
+        }
+
+        const server = state.servers.get(key);
+        server.bots = []; // Reset bots before adding active ones
+      }
+
+      // Sadece aktif olmayan sunucuları state.servers'dan çıkaralım
+      for (const key of state.servers.keys()) {
+        if (!activeKeys.has(key)) {
+          state.servers.delete(key);
+        }
+      }
+
+      // Geriye kalan sunucular için bot listesini ve durumunu dolduralım
+      for (const bot of state.bots.values()) {
+        const key = bot.serverKey || `${bot.serverIp}:${bot.serverPort}`;
+        if (!key) continue;
+        const server = state.servers.get(key);
+        if (server) {
+          server.bots.push(bot);
+          if (bot.status === 'online') {
+            server.status = 'online';
+          } else if (bot.status === 'error' && server.status !== 'online') {
+            server.status = 'error';
+          } else if (bot.status === 'connecting' && server.status === 'offline') {
+            server.status = 'connecting';
+          }
+        }
+      }
+
+      // Sunucu genel istatistiklerini hesaplayalım
+      for (const server of state.servers.values()) {
+        server.onlineBotCount = server.bots.filter(b => b.status === 'online').length;
+        server.totalBotCount = server.bots.length;
+
+        // Daha önce hiç çekilmediyse veya üzerinden 60 saniye geçtiyse API'ye istek gitsin.
+        // Eğer sunucu açık olduğu halde ikonu/motd'u hâlâ yoksa her 30sn'de bir yeniden dene.
+        const now = Date.now();
+        const hasNoData = !server.icon && !server.motd;
+        const cacheDuration = hasNoData ? 30000 : 120000; // 30sn (veri yoksa) / 2dk (başarılı veri varsa)
+
+        if (!server.lastFetched || (now - server.lastFetched > cacheDuration)) {
+          server.lastFetched = now;
+          fetchServerInfo(server);
+        }
+      }
+    }
+
+    async function fetchServerInfo(server) {
+      try {
+        // Çevrimdışı modda API çağrısı atma
+        if (isOfflineMode) {
+          server.motd = 'Çevrimdışı mod - MOTD bilgisi yok';
+          server.onlinePlayers = 0;
+          server.maxPlayers = 20;
+          renderServerBrowser();
+          if (state.currentServerKey === server.serverKey) {
+            updatePanelHeader(server);
+          }
+          return;
+        }
+
+        let data = null;
+        const response = await fetch(`/api/server-info?ip=${encodeURIComponent(server.serverIp)}&port=${encodeURIComponent(server.serverPort)}`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        }).catch(() => null);
+
+        if (response && response.ok) {
+          try {
+            data = await response.json();
+          } catch (e) {
+            console.error('[API Proxy JSON error]', e);
+          }
+        }
+
+        // Eğer backend proxy başarısız olduysa veya online: false döndüyse,
+        // doğrudan istemciden (CORS üzerinden) mcstatus.io'ya istek atalım!
+        if (!data || !data.online) {
+          console.log('[API] Backend proxy yetersiz veya rate-limit yedi, doğrudan istemci üzerinden deneniyor...');
+          try {
+            const clientRes = await fetch(`https://api.mcstatus.io/v2/status/java/${server.serverIp}:${server.serverPort}`);
+            if (clientRes.ok) {
+              const mcData = await clientRes.json();
+              if (mcData && mcData.online) {
+                const cleanMotd = mcData.motd?.clean || mcData.motd?.raw || '';
+                const rawMotd = mcData.motd?.raw || '';
+                data = {
+                  online: true,
+                  motd: {
+                    clean: [cleanMotd],
+                    raw: [rawMotd]
+                  },
+                  players: {
+                    online: mcData.players?.online || 0,
+                    max: mcData.players?.max || 0
+                  },
+                  version: mcData.version?.name_clean || mcData.version?.name_raw || '1.20.1',
+                  icon: mcData.icon || null
+                };
+              }
+            }
+          } catch (e) {
+            console.warn('[API Client-side] mcstatus.io hatası:', e);
+          }
+        }
+
+        // Eğer hala veri yoksa, api.mcsrvstat.us üzerinden doğrudan istemciden deneyelim
+        if (!data || !data.online) {
+          try {
+            const clientRes = await fetch(`https://api.mcsrvstat.us/3/${server.serverIp}:${server.serverPort}`);
+            if (clientRes.ok) {
+              const mcsrvData = await clientRes.json();
+              if (mcsrvData && mcsrvData.online) {
+                const cleanArray = Array.isArray(mcsrvData.motd?.clean) ? mcsrvData.motd.clean : [mcsrvData.motd?.clean || ''];
+                const rawArray = Array.isArray(mcsrvData.motd?.raw) ? mcsrvData.motd.raw : [mcsrvData.motd?.raw || ''];
+                data = {
+                  online: true,
+                  motd: { clean: cleanArray, raw: rawArray },
+                  players: {
+                    online: mcsrvData.players?.online || 0,
+                    max: mcsrvData.players?.max || 0
+                  },
+                  version: typeof mcsrvData.version === 'string' ? mcsrvData.version : (mcsrvData.version?.name_clean || mcsrvData.version?.name || '1.20.1'),
+                  icon: mcsrvData.icon || null
+                };
+              }
+            }
+          } catch (e) {
+            console.warn('[API Client-side] mcsrvstat.us hatası:', e);
+          }
+        }
+
+        if (data && data.online) {
+          server.motd = (data.motd && data.motd.clean && data.motd.clean[0]) || 
+                         (data.motd && data.motd.raw && data.motd.raw[0]) || '';
+          server.onlinePlayers = (data.players && data.players.online) || 0;
+          server.maxPlayers = (data.players && data.players.max) || 0;
+          if (data.version) {
+            server.version = (typeof data.version === 'string') 
+              ? data.version 
+              : (data.version.name_clean || data.version.name || server.version);
+          }
+          if (data.icon && data.icon !== 'null' && data.icon !== 'undefined') {
+            server.icon = data.icon.startsWith('data:') ? data.icon : 'data:image/png;base64,' + data.icon;
+          } else {
+            server.icon = null;
+          }
+        }
+
+        renderServerBrowser();
+        if (state.currentServerKey === server.serverKey) {
+          updatePanelHeader(server);
+        }
+      } catch (err) {
+        console.log('[API] Sunucu bilgisi alınamadı:', err.message);
+      }
+    }
+
+    // ── Sayfa Geçişleri ────────────────────────────────────────
+    function showPage(pageName) {
+      if (pageName === 'browser') {
+        pages.browser.classList.remove('hidden');
+        pages.panel.classList.add('hidden');
+        state.currentServerKey = null;
+      } else if (pageName === 'panel') {
+        pages.browser.classList.add('hidden');
+        pages.panel.classList.remove('hidden');
+      }
+    }
+
+    els.btnBack.addEventListener('click', () => {
+      showPage('browser');
+    });
+
+    // ── Server Browser Render ──────────────────────────────────
+    function renderServerBrowser() {
+      const servers = Array.from(state.servers.values());
+
+      if (servers.length === 0) {
+        els.serverList.style.display = 'none';
+        els.serverEmpty.style.display = 'block';
+        return;
+      }
+
+      els.serverList.style.display = 'flex';
+      els.serverEmpty.style.display = 'none';
+
+      for (const server of servers) {
+        const safeId = 'server-card-' + server.serverKey.replace(/[^a-zA-Z0-9]/g, '-');
+        let card = document.getElementById(safeId);
+
+        if (!card) {
+          card = createServerCard(server);
+          els.serverList.appendChild(card);
+        } else {
+          updateServerCard(card, server);
+        }
+      }
+
+      const cards = els.serverList.querySelectorAll('.server-card');
+      for (const card of cards) {
+        const key = card.dataset.serverKey;
+        if (!state.servers.has(key)) {
+          card.remove();
+        }
+      }
+    }
+
+    function createServerCard(server) {
+      const card = document.createElement('div');
+      const safeId = 'server-card-' + server.serverKey.replace(/[^a-zA-Z0-9]/g, '-');
+      card.className = 'server-card has-' + server.status;
+      card.id = safeId;
+      card.dataset.serverKey = server.serverKey;
+
+      const statusColor = {
+        online: 'var(--online)',
+        offline: 'var(--offline)',
+        error: 'var(--error)',
+        connecting: 'var(--connecting)'
+      }[server.status] || 'var(--offline)';
+
+      const iconHtml = server.icon 
+        ? '<img src="' + server.icon + '" alt="icon">' 
+        : '<img src="https://api.mcsrvstat.us/icon/' + encodeURIComponent(server.serverIp) + '" alt="icon" onerror="this.onerror=null; this.outerHTML=\'<span class=&quot;icon-placeholder&quot;>🖥️</span>\'">';
+
+      const botsListHtml = (server.bots || []).map(bot => `
+        <span class="bot-name-tag status-${bot.status}" title="${escapeHtml(bot.name)}">
+          <span class="bot-status-dot"></span>${escapeHtml(bot.name)}
+        </span>
+      `).join('');
+
+      card.innerHTML = `
+        <div class="server-left-area">
+          <div class="server-icon">${iconHtml}</div>
+          <div class="server-bots-list">${botsListHtml}</div>
+        </div>
+        <div class="server-info">
+          <div class="server-name">
+            ${escapeHtml(server.serverIp)}
+            <span style="color:${statusColor};font-size:0.85rem;">●</span>
+          </div>
+          <div class="server-motd">${escapeHtml(server.motd || 'MOTD yükleniyor...')}</div>
+          <div class="server-meta">
+            <span class="version-badge">${server.version}</span>
+            ${server.hasProxy ? '<span class="proxy-badge">🧦 SOCKS5</span>' : ''}
+            <span>👤 ${server.onlinePlayers}/${server.maxPlayers}</span>
+            <span>🤖 ${server.onlineBotCount}/${server.totalBotCount} bot</span>
+          </div>
+        </div>
+        <div class="player-count">
+          <div class="count">${server.onlineBotCount}<span>/${server.totalBotCount}</span></div>
+          <div class="label">Aktif Bot</div>
+        </div>
+        <div class="server-actions">
+          <button class="btn-add-bot" data-action="add" data-server="${server.serverKey}">
+            <span>➕</span> Bot Ekle
+          </button>
+          ${server.totalBotCount > 0 ? `
+          <button class="btn-remove-all" data-action="remove-all" data-server="${server.serverKey}">
+            <span>🗑️</span>
+          </button>
+          ` : ''}
+        </div>
+      `;
+
+      // Bot Ekle butonu - KART CLICK'TEN ÖNCE
+      const addBtn = card.querySelector('[data-action="add"]');
+      if (addBtn) {
+        addBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openAddBotModal(server);
+        });
+      }
+
+      // Tümünü Çıkar butonu - KART CLICK'TEN ÖNCE
+      const removeBtn = card.querySelector('[data-action="remove-all"]');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm('"' + server.serverIp + '" sunucusundaki tüm botları çıkarmak istiyor musun?')) {
+            if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+            socket.emit('remove-server-bots', server.serverKey);
+          } else {
+            // Çevrimdışı mod - tüm botları yerel sil
+            const botsToRemove = server.bots || [];
+            botsToRemove.forEach(b => {
+              state.bots.delete(b.id);
+              state.consoles.delete(b.id);
+              clearStorageForBot(b.id);
+            });
+            updateServersFromBots();
+            renderServerBrowser();
+            showToast('success', 'Tüm botlar çıkarıldı (Çevrimdışı mod)');
+          }
+          }
+        });
+      }
+
+      // Kartın kendisine tıklama (panel aç) - BUTONLARDAN SONRA
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.server-actions')) return;
+        openServerPanel(server.serverKey);
+      });
+
+      if (server.bots && server.bots.length > 0) {
+        server.bots.forEach(b => {
+          if (b && b.id) loadMessagesFromStorage(b.id);
+        });
+      }
+
+      return card;
+    }
+
+    function updateServerCard(card, server) {
+      const iconEl = card.querySelector('.server-icon');
+      if (iconEl) {
+        if (server.icon) {
+          iconEl.innerHTML = '<img src="' + server.icon + '" alt="icon">';
+        } else {
+          iconEl.innerHTML = '<img src="https://api.mcsrvstat.us/icon/' + encodeURIComponent(server.serverIp) + '" alt="icon" onerror="this.onerror=null; this.outerHTML=\'<span class=&quot;icon-placeholder&quot;>🖥️</span>\'">';
+        }
+      }
+
+      const botsListEl = card.querySelector('.server-bots-list');
+      if (botsListEl) {
+        const botsListHtml = (server.bots || []).map(bot => `
+          <span class="bot-name-tag status-${bot.status}" title="${escapeHtml(bot.name)}">
+            <span class="bot-status-dot"></span>${escapeHtml(bot.name)}
+          </span>
+        `).join('');
+        botsListEl.innerHTML = botsListHtml;
+      }
+
+      card.className = 'server-card has-' + server.status;
+
+      const motdEl = card.querySelector('.server-motd');
+      if (motdEl && server.motd) motdEl.textContent = server.motd;
+
+      const metaEl = card.querySelector('.server-meta');
+      if (metaEl) {
+        metaEl.innerHTML = `
+          <span class="version-badge">${server.version}</span>
+          ${server.hasProxy ? '<span class="proxy-badge">🧦 SOCKS5</span>' : ''}
+          <span>👤 ${server.onlinePlayers}/${server.maxPlayers}</span>
+          <span>🤖 ${server.onlineBotCount}/${server.totalBotCount} bot</span>
+        `;
+      }
+
+      const countEl = card.querySelector('.player-count .count');
+      if (countEl) {
+        countEl.innerHTML = `${server.onlineBotCount}<span>/${server.totalBotCount}</span>`;
+      }
+    }
+
+    // ── Bot Kontrol Paneli ─────────────────────────────────────
+    function openServerPanel(serverKey) {
+      state.currentServerKey = serverKey;
+      const server = state.servers.get(serverKey);
+      if (!server) return;
+
+      updatePanelHeader(server);
+      renderBotPanel();
+      showPage('panel');
+    }
+
+    function updatePanelHeader(server) {
+      els.panelServerName.textContent = server.serverIp;
+      els.panelServerIp.textContent = server.serverIp + ':' + server.serverPort;
+      els.panelVersion.textContent = server.version;
+      els.panelProxyBadge.style.display = server.hasProxy ? 'inline' : 'none';
+
+      if (server.icon) {
+        els.panelIcon.innerHTML = '<img src="' + server.icon + '" alt="icon">';
+      } else {
+        els.panelIcon.innerHTML = '<img src="https://api.mcsrvstat.us/icon/' + encodeURIComponent(server.serverIp) + '" alt="icon" onerror="this.onerror=null; this.outerHTML=\'<span class=&quot;icon-placeholder&quot;>🖥️</span>\'">';
+      }
+    }
+
+    function renderBotPanel() {
+      const server = state.servers.get(state.currentServerKey);
+      if (!server) return;
+
+      const bots = server.bots;
+
+      if (bots.length === 0) {
+        els.botsContainer.style.display = 'none';
+        els.panelEmpty.style.display = 'block';
+        return;
+      }
+
+      els.botsContainer.style.display = 'grid';
+      els.panelEmpty.style.display = 'none';
+
+      for (const bot of bots) {
+        let card = document.getElementById('card-' + bot.id);
+
+        if (!card) {
+          card = createBotCard(bot);
+          els.botsContainer.appendChild(card);
+        } else {
+          updateBotCard(card, bot);
+        }
+        if (bot && bot.id) {
+          loadMessagesFromStorage(bot.id);
+        }
+      }
+
+      const cards = els.botsContainer.querySelectorAll('.bot-card');
+      for (const card of cards) {
+        const botId = card.dataset.botId;
+        const bot = state.bots.get(botId);
+        if (!bot || bot.serverKey !== state.currentServerKey) {
+          card.remove();
+        }
+      }
+    }
+
+    function createBotCard(bot) {
+      const card = document.createElement('div');
+      card.className = 'bot-card';
+      card.id = 'card-' + bot.id;
+      card.dataset.botId = bot.id;
+
+      const statusClass = bot.status;
+      const statusText = {
+        online: 'Çevrimiçi',
+        offline: 'Çevrimdışı',
+        error: 'Hata',
+        connecting: 'Bağlanıyor...'
+      }[bot.status] || bot.status;
+
+      card.innerHTML = `
+        <div class="bot-card-header">
+          <div class="bot-info">
+            <div class="status-dot ${statusClass}"></div>
+            <div>
+              <div class="bot-name">${escapeHtml(bot.name)}</div>
+              <div class="bot-meta">
+                <span id="status-${bot.id}">${statusText}</span>
+                <span id="coords-${bot.id}" style="color:var(--text-muted);font-family:monospace;"></span>
+              </div>
+            </div>
+          </div>
+          <div class="bot-actions">
+            <button class="btn-icon" title="Oto Giriş / Mesaj Ayarları" data-action="join-settings" data-bot="${bot.id}">💬</button>
+            <button class="btn-icon" title="Script Panel" data-action="script" data-bot="${bot.id}">📜</button>
+            <button class="btn-icon" title="Envanter" data-action="inventory" data-bot="${bot.id}">🎒</button>
+            <button class="btn-icon" title="Oyuncu Listesi" data-action="players" data-bot="${bot.id}">👥</button>
+            <button class="btn-icon ${bot.antiAfkEnabled ? 'active' : ''}" title="Anti-AFK" data-action="antiafk" data-bot="${bot.id}" id="afk-btn-${bot.id}">🛡️</button>
+            <button class="btn-icon ${bot.autoReconnectEnabled !== false ? 'active' : ''}" title="Otomatik Yeniden Bağlan" data-action="autoreconnect" data-bot="${bot.id}" id="autoreconnect-btn-${bot.id}">🔄</button>
+            <button class="btn-icon ${bot.consoleMuted ? 'muted-btn' : ''}" title="Konsol Mesajlarını Sustur/Aç" data-action="mute-console" data-bot="${bot.id}" id="mute-btn-${bot.id}">🔇</button>
+            <button class="btn-icon danger" title="Botu Çıkar" data-action="remove" data-bot="${bot.id}">🗑️</button>
+          </div>
+        </div>
+        <div class="bot-stats" id="stats-${bot.id}">
+          <div class="bot-stat health">
+            <span class="stat-icon">❤️</span>
+            <span class="stat-value" id="health-${bot.id}">-</span>
+            <span class="stat-label">HP</span>
+          </div>
+          <div class="bot-stat food">
+            <span class="stat-icon">🍖</span>
+            <span class="stat-value" id="food-${bot.id}">-</span>
+            <span class="stat-label">Açlık</span>
+          </div>
+          <div class="bot-stat xp">
+            <span class="stat-icon">⭐</span>
+            <span class="stat-value" id="xp-${bot.id}">-</span>
+            <span class="stat-label">XP</span>
+          </div>
+          <div class="bot-stat">
+            <span class="stat-icon">📍</span>
+            <span class="stat-value" id="pos-${bot.id}" style="font-family:monospace;font-size:0.7rem;">-</span>
+          </div>
+        </div>
+
+        <div class="bot-addon-tabs">
+          <button class="addon-tab active" data-tab="movement" data-bot="${bot.id}">🎮 Kontrol</button>
+          <button class="addon-tab" data-tab="radar" data-bot="${bot.id}">🗺️ Radar</button>
+          <button class="addon-tab" data-tab="inventory-vis" data-bot="${bot.id}">🎒 Envanter</button>
+          <button class="addon-tab" data-tab="console" data-bot="${bot.id}">📜 Konsol</button>
+        </div>
+
+        <!-- Tab 1: Controls -->
+        <div class="addon-pane" id="pane-movement-${bot.id}">
+          <div class="movement-controls" id="movement-${bot.id}">
+            <div class="movement-row">
+              <button class="move-btn" data-move="forward" data-bot="${bot.id}">W</button>
+            </div>
+            <div class="movement-row">
+              <button class="move-btn" data-move="left" data-bot="${bot.id}">A</button>
+              <button class="move-btn" data-move="back" data-bot="${bot.id}">S</button>
+              <button class="move-btn" data-move="right" data-bot="${bot.id}">D</button>
+            </div>
+            <div class="movement-row">
+              <button class="move-btn wide" data-move="jump" data-bot="${bot.id}">⬆️ Zıpla</button>
+              <button class="move-btn wide" data-move="sneak" data-bot="${bot.id}">🦆 Eğil</button>
+              <button class="move-btn wide" data-move="sprint" data-bot="${bot.id}">🏃 Koş</button>
+            </div>
+            <div class="movement-row">
+              <button class="move-btn wide" data-move="swing" data-bot="${bot.id}">✋ Sallan</button>
+              <button class="move-btn wide" data-move="useItem" data-bot="${bot.id}">🖱️ Kullan</button>
+              <button class="move-btn wide toggle-mine" data-action="toggle-mine" data-bot="${bot.id}" id="mine-btn-${bot.id}">⛏️ Kaz</button>
+            </div>
+            <div class="look-pad-wrapper">
+              <div class="look-pad-label">👁️ Bakış Yönü — Sürükle</div>
+              <canvas class="look-pad" id="look-pad-${bot.id}" data-bot="${bot.id}" width="160" height="110"></canvas>
+            </div>
+            <div class="move-label">Basılı Tut = Sürekli Çalışır | Bırak = Durur</div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Radar Map -->
+        <div class="addon-pane hidden" id="pane-radar-${bot.id}">
+          <div class="radar-pane-wrapper">
+            <div class="radar-header">
+              <div class="radar-coords" id="radar-coords-${bot.id}">X: - | Y: - | Z: -</div>
+              <div class="radar-controls">
+                <button class="radar-zoom-btn" id="radar-zoom-out-${bot.id}">➖</button>
+                <span class="zoom-label" id="radar-zoom-label-${bot.id}">32m</span>
+                <button class="radar-zoom-btn" id="radar-zoom-in-${bot.id}">➕</button>
+              </div>
+            </div>
+            <div style="position:relative; width:100%; display:flex; justify-content:center; align-items:center; padding:10px 0; background:#0b0e14; border-radius:6px; border:1px solid var(--border);">
+              <canvas id="radar-canvas-${bot.id}" width="260" height="200" style="background:#070a0f; border-radius:50%; border:2.5px solid #202630; box-shadow:0 0 16px rgba(0,0,0,0.6);"></canvas>
+              <div class="radar-north-tag">N</div>
+            </div>
+            <div class="radar-legend">
+              <div class="legend-item"><span class="legend-dot self"></span> Bot</div>
+              <div class="legend-item"><span class="legend-dot player"></span> Oyuncu</div>
+              <div class="legend-item"><span class="legend-dot mob-hostile"></span> Canavar</div>
+              <div class="legend-item"><span class="legend-dot mob-passive"></span> Hayvan</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Live Inventory Visualizer -->
+        <div class="addon-pane hidden" id="pane-inventory-vis-${bot.id}">
+          <div class="live-inventory-pane">
+            <div class="inventory-top-row">
+              <div class="armor-slots" id="live-inv-armor-${bot.id}">
+                <!-- helmets, chestplates, leggings, boots + offhand -->
+              </div>
+              <div class="inventory-stats">
+                <div id="live-inv-held-item-${bot.id}" class="held-item-info">Aktif El: Boş</div>
+                <button class="btn-panel-action" id="live-inv-refresh-${bot.id}">🔄 Tazele</button>
+              </div>
+            </div>
+            
+            <div class="inventory-section-label">🎒 Ana Envanter</div>
+            <div class="live-inventory-grid" id="live-inv-main-${bot.id}">
+              <!-- slots 9-35 -->
+            </div>
+            
+            <div class="inventory-section-label">🍫 Hızlı Kısım (Hotbar)</div>
+            <div class="live-inventory-hotbar" id="live-inv-hotbar-${bot.id}">
+              <!-- slots 36-44 -->
+            </div>
+            
+            <div class="live-inv-item-detail" id="live-inv-item-detail-${bot.id}">
+              <div class="detail-placeholder" style="color:var(--text-muted);font-size:0.75rem;text-align:center;padding:10px;border:1px dashed var(--border);border-radius:4px;background:#0d1117;">Detaylar için bir eşyaya tıkla</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Console Log -->
+        <div class="addon-pane hidden" id="pane-console-${bot.id}">
+          <div class="bot-console" id="console-${bot.id}"></div>
+        </div>
+
+
+        <div class="bot-controls">
+          <input type="text" placeholder="Mesaj yaz..." data-bot="${bot.id}" class="msg-input">
+          <button class="btn-send" data-action="send" data-bot="${bot.id}">Gönder</button>
+        </div>
+      `;
+
+      // Active live radar zoom initialization
+      if (!state.radarRanges) state.radarRanges = {};
+      state.radarRanges[bot.id] = 32; // Default range is 32m
+
+      const zoomInBtn = card.querySelector('#radar-zoom-in-' + bot.id);
+      const zoomOutBtn = card.querySelector('#radar-zoom-out-' + bot.id);
+      const zoomLabel = card.querySelector('#radar-zoom-label-' + bot.id);
+
+      if (zoomInBtn && zoomOutBtn && zoomLabel) {
+        zoomInBtn.addEventListener('click', () => {
+          let current = state.radarRanges[bot.id];
+          if (current > 8) {
+            state.radarRanges[bot.id] = current / 2;
+            zoomLabel.textContent = state.radarRanges[bot.id] + 'm';
+          }
+        });
+
+        zoomOutBtn.addEventListener('click', () => {
+          let current = state.radarRanges[bot.id];
+          if (current < 128) {
+            state.radarRanges[bot.id] = current * 2;
+            zoomLabel.textContent = state.radarRanges[bot.id] + 'm';
+          }
+        });
+      }
+
+      // Addon tabs navigation system
+      const tabs = card.querySelectorAll('.addon-tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabName = tab.dataset.tab;
+          
+          card.querySelectorAll('.addon-tab').forEach(t => t.classList.remove('active'));
+          card.querySelectorAll('.addon-pane').forEach(p => p.classList.add('hidden'));
+          
+          tab.classList.add('active');
+          const targetPane = card.querySelector('#pane-' + tabName + '-' + bot.id);
+          if (targetPane) targetPane.classList.remove('hidden');
+
+          if (tabName === 'inventory-vis') {
+            if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+              socket.emit('get-inventory', bot.id);
+            }
+          }
+        });
+      });
+
+      // Refresh live inventory
+      const refreshBtn = card.querySelector('#live-inv-refresh-' + bot.id);
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+          if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+            socket.emit('get-inventory', bot.id);
+            showToast('success', 'Envanter tazeleniyor...');
+          }
+        });
+      }
+
+      card.querySelector('[data-action="remove"]').addEventListener('click', () => {
+        if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+          socket.emit('remove-bot', bot.id);
+        } else {
+          // Çevrimdışı mod - yerel sil
+          state.bots.delete(bot.id);
+          state.consoles.delete(bot.id);
+          clearStorageForBot(bot.id);
+          updateServersFromBots();
+          renderServerBrowser();
+          if (state.currentServerKey) renderBotPanel();
+          showToast('success', 'Bot çıkarıldı (Çevrimdışı mod)');
+        }
+      });
+
+      card.querySelector('[data-action="join-settings"]').addEventListener('click', () => {
+        openJoinSettingsModal(bot);
+      });
+
+      card.querySelector('[data-action="players"]').addEventListener('click', () => {
+        state.currentPlayerListBot = bot.id;
+        els.playerList.innerHTML = '<li class="player-item">Yükleniyor...</li>';
+        els.modalPlayers.classList.add('active');
+        if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+          socket.emit('request-player-list', bot.id);
+        } else {
+          // Çevrimdışı mod - demo oyuncu listesi
+          showPlayerList([
+            { username: 'Steve', ping: 45 },
+            { username: 'Alex', ping: 62 },
+            { username: 'Notch', ping: 120 },
+            { username: 'Herobrine', ping: 999 }
+          ]);
+        }
+      });
+
+      card.querySelector('[data-action="antiafk"]').addEventListener('click', () => {
+        const currentBot = state.bots.get(bot.id) || bot;
+        const newState = !currentBot.antiAfkEnabled;
+        if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+          socket.emit('toggle-antiafk', { botId: bot.id, enabled: newState });
+        } else {
+          // Çevrimdışı mod - yerel toggle
+          bot.antiAfkEnabled = newState;
+          updateAntiAfkButton(bot.id, newState);
+          const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          addConsoleMessage(bot.id, 'system', `Anti-AFK ${newState ? 'aktif' : 'devre dışı'} (Çevrimdışı)`, now);
+          showToast('success', `Anti-AFK ${newState ? 'aktif' : 'devre dışı'} (Çevrimdışı mod)`);
+        }
+      });
+
+      card.querySelector('[data-action="autoreconnect"]').addEventListener('click', () => {
+        const currentBot = state.bots.get(bot.id) || bot;
+        const newState = currentBot.autoReconnectEnabled === false ? true : false;
+        if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+          socket.emit('toggle-autoreconnect', { botId: bot.id, enabled: newState });
+        } else {
+          // Çevrimdışı mod - yerel toggle
+          bot.autoReconnectEnabled = newState;
+          updateAutoReconnectButton(bot.id, newState);
+          showToast('success', `Otomatik yeniden bağlanma ${newState ? 'aktif' : 'devre dışı'} (Çevrimdışı mod)`);
+        }
+      });
+
+      card.querySelector('[data-action="script"]').addEventListener('click', () => {
+        openScriptModal(bot.id, bot.name);
+      });
+
+      card.querySelector('[data-action="inventory"]').addEventListener('click', () => {
+        openInventoryModal(bot.id, bot.name);
+      });
+
+      card.querySelector('[data-action="mute-console"]').addEventListener('click', () => {
+        const muteBtn = document.getElementById('mute-btn-' + bot.id);
+        if (state.mutedConsoles.has(bot.id)) {
+          state.mutedConsoles.delete(bot.id);
+          if (muteBtn) muteBtn.classList.remove('muted-btn');
+          showToast('success', 'Konsol açıldı.');
+        } else {
+          state.mutedConsoles.add(bot.id);
+          if (muteBtn) muteBtn.classList.add('muted-btn');
+          showToast('success', 'Konsol susturuldu (script/system mesajları gizlendi).');
+        }
+      });
+
+      card.querySelector('[data-action="toggle-mine"]').addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        const botId = btn.dataset.bot;
+        const isOn = state.miningBots.has(botId);
+        if (isOn) {
+          state.miningBots.delete(botId);
+          btn.classList.remove('mining-on');
+          if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+            socket.emit('bot-move', { botId: botId, action: 'stopMining', state: true });
+          }
+          showToast('success', '⛏️ Kazma durduruldu.');
+        } else {
+          state.miningBots.add(botId);
+          btn.classList.add('mining-on');
+          if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+            socket.emit('bot-move', { botId: botId, action: 'startMining', state: true });
+          }
+          showToast('success', '⛏️ Kazma başlatıldı.');
+        }
+      });
+
+      const msgInput = card.querySelector('.msg-input');
+      const sendBtn = card.querySelector('[data-action="send"]');
+
+      sendBtn.addEventListener('click', () => {
+        const msg = msgInput.value.trim();
+        if (msg) {
+          if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+            socket.emit('send-message', { botId: bot.id, message: msg });
+          } else {
+            // Çevrimdışı mod - yerel göster
+            const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            addConsoleMessage(bot.id, 'self', msg, now);
+            saveMessageToStorage(bot.id, 'self', msg, now);
+          }
+          msgInput.value = '';
+        }
+      });
+
+      msgInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendBtn.click();
+      });
+
+      // ── Hareket Kontrolleri ────────────────────────────────
+      const moveButtons = card.querySelectorAll('.move-btn[data-move]');
+      moveButtons.forEach(btn => {
+        const moveAction = btn.dataset.move;
+        let holdInterval = null;
+        let isHolding = false;
+
+        // Basılı tutma başladığında
+        const startHold = (e) => {
+          if (e) e.preventDefault();
+          if (isHolding) return;
+          isHolding = true;
+          btn.classList.add('active');
+
+          // İlk eylem hemen gönder
+          if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+            socket.emit('bot-move', { botId: bot.id, action: moveAction, state: true });
+          }
+
+          // Basılı tutulduğu sürece her 100ms'de bir tekrarla (sürekli hareket)
+          holdInterval = setInterval(() => {
+            if (!isHolding) return;
+            if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+              socket.emit('bot-move', { botId: bot.id, action: moveAction, state: true });
+            }
+          }, 100);
+        };
+
+        // Basılı tutma bittiğinde
+        const endHold = (e) => {
+          if (e) e.preventDefault();
+          if (!isHolding) return;
+          isHolding = false;
+          btn.classList.remove('active');
+          if (holdInterval) {
+            clearInterval(holdInterval);
+            holdInterval = null;
+          }
+          // Durma sinyali gönder
+          if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+            socket.emit('bot-move', { botId: bot.id, action: moveAction, state: false });
+          }
+        };
+
+        // Mouse events
+        btn.addEventListener('mousedown', startHold);
+        btn.addEventListener('mouseup', endHold);
+        btn.addEventListener('mouseleave', () => {
+          if (isHolding) endHold();
+        });
+
+        // Touch events (mobile)
+        btn.addEventListener('touchstart', startHold, { passive: false });
+        btn.addEventListener('touchend', endHold, { passive: false });
+        btn.addEventListener('touchcancel', endHold, { passive: false });
+      });
+
+      if (bot && bot.id) {
+        loadMessagesFromStorage(bot.id);
+      }
+
+      // ── Look Pad ──────────────────────────────────────────
+      const lookPad = card.querySelector('#look-pad-' + bot.id);
+      if (lookPad) {
+        initLookPad(lookPad, bot.id);
+      }
+
+      // ── Yapı İnşaatı (Builder) UI Kontrolleri ───────────────
+      const fileInput = card.querySelector('#builder-file-' + bot.id);
+      const uploadBtn = card.querySelector('#builder-upload-btn-' + bot.id);
+      const clearBtn = card.querySelector('#builder-clear-btn-' + bot.id);
+      const statusBox = card.querySelector('#builder-status-box-' + bot.id);
+      const blockCountSpan = card.querySelector('#builder-block-count-' + bot.id);
+      const infoDiv = card.querySelector('#builder-info-' + bot.id);
+      const checkDiv = card.querySelector('#builder-invent-check-' + bot.id);
+      const checkList = card.querySelector('#builder-check-list-' + bot.id);
+      const startBtn = card.querySelector('#builder-start-' + bot.id);
+      const stopBtn = card.querySelector('#builder-stop-' + bot.id);
+      const rotationSelect = card.querySelector('#builder-rotation-' + bot.id);
+      const originTypeSelect = card.querySelector('#builder-origin-type-' + bot.id);
+      const customCoordsDiv = card.querySelector('#builder-custom-coords-' + bot.id);
+      const xInput = card.querySelector('#builder-x-' + bot.id);
+      const yInput = card.querySelector('#builder-y-' + bot.id);
+      const zInput = card.querySelector('#builder-z-' + bot.id);
+      const progressBox = card.querySelector('#builder-progress-' + bot.id);
+
+      if (originTypeSelect && customCoordsDiv) {
+        originTypeSelect.addEventListener('change', () => {
+          if (originTypeSelect.value === 'custom') {
+            customCoordsDiv.classList.remove('hidden');
+          } else {
+            customCoordsDiv.classList.add('hidden');
+          }
+        });
+      }
+
+      let structureData = null;
+
+      const presetSelect = card.querySelector('#builder-preset-' + bot.id);
+      if (presetSelect) {
+        presetSelect.addEventListener('change', () => {
+          const val = presetSelect.value;
+          if (val === 'cactus_4x4') {
+            const data = [
+              {"x": 0, "y": 0, "z": 0, "block": "minecraft:cobblestone"},
+              {"x": 2, "y": 0, "z": 0, "block": "minecraft:cobblestone"},
+              {"x": 1, "y": 0, "z": 1, "block": "minecraft:cobblestone"},
+              {"x": 3, "y": 0, "z": 1, "block": "minecraft:cobblestone"},
+              {"x": 0, "y": 0, "z": 2, "block": "minecraft:cobblestone"},
+              {"x": 2, "y": 0, "z": 2, "block": "minecraft:cobblestone"},
+              {"x": 1, "y": 0, "z": 3, "block": "minecraft:cobblestone"},
+              {"x": 3, "y": 0, "z": 3, "block": "minecraft:cobblestone"},
+
+              {"x": 0, "y": 1, "z": 0, "block": "minecraft:sand"},
+              {"x": 2, "y": 1, "z": 0, "block": "minecraft:sand"},
+              {"x": 1, "y": 1, "z": 1, "block": "minecraft:sand"},
+              {"x": 3, "y": 1, "z": 1, "block": "minecraft:sand"},
+              {"x": 0, "y": 1, "z": 2, "block": "minecraft:sand"},
+              {"x": 2, "y": 1, "z": 2, "block": "minecraft:sand"},
+              {"x": 1, "y": 1, "z": 3, "block": "minecraft:sand"},
+              {"x": 3, "y": 1, "z": 3, "block": "minecraft:sand"},
+
+              {"x": 0, "y": 2, "z": 0, "block": "minecraft:cactus"},
+              {"x": 2, "y": 2, "z": 0, "block": "minecraft:cactus"},
+              {"x": 1, "y": 2, "z": 1, "block": "minecraft:cactus"},
+              {"x": 3, "y": 2, "z": 1, "block": "minecraft:cactus"},
+              {"x": 0, "y": 2, "z": 2, "block": "minecraft:cactus"},
+              {"x": 2, "y": 2, "z": 2, "block": "minecraft:cactus"},
+              {"x": 1, "y": 2, "z": 3, "block": "minecraft:cactus"},
+              {"x": 3, "y": 2, "z": 3, "block": "minecraft:cactus"},
+
+              {"x": 1, "y": 3, "z": 0, "block": "minecraft:oak_fence"},
+              {"x": 3, "y": 3, "z": 0, "block": "minecraft:oak_fence"},
+              {"x": 1, "y": 3, "z": 2, "block": "minecraft:oak_fence"},
+              {"x": 3, "y": 3, "z": 2, "block": "minecraft:oak_fence"}
+            ];
+            
+            structureData = data;
+            blockCountSpan.textContent = `${data.length} Blok`;
+            
+            const blockCounts = {};
+            data.forEach(b => {
+              const norm = b.block.replace('minecraft:', '');
+              blockCounts[norm] = (blockCounts[norm] || 0) + 1;
+            });
+
+            let blockSummary = Object.entries(blockCounts).map(([name, count]) => `${count}x ${name}`).join(', ');
+            if (blockSummary.length > 80) blockSummary = blockSummary.substring(0, 80) + '...';
+            infoDiv.textContent = `Bloklar: ${blockSummary}`;
+
+            statusBox.classList.remove('hidden');
+            clearBtn.classList.remove('hidden');
+
+            runLocalInventoryCheck();
+          } else {
+            // clear preset
+            fileInput.value = '';
+            structureData = null;
+            statusBox.classList.add('hidden');
+            clearBtn.classList.add('hidden');
+            checkDiv.classList.add('hidden');
+            startBtn.setAttribute('disabled', 'true');
+            startBtn.style.cursor = 'not-allowed';
+            startBtn.style.opacity = '0.5';
+            progressBox.classList.add('hidden');
+            stopBtn.classList.add('hidden');
+            startBtn.classList.remove('hidden');
+          }
+        });
+      }
+
+      const runLocalInventoryCheck = () => {
+        if (!structureData) return;
+        
+        const requiredCounts = {};
+        structureData.forEach(b => {
+          requiredCounts[b.block] = (requiredCounts[b.block] || 0) + 1;
+        });
+
+        if (!state.botInventories) state.botInventories = new Map();
+        const invData = state.botInventories.get(bot.id);
+        
+        checkList.innerHTML = '';
+        checkDiv.classList.remove('hidden');
+
+        if (!invData || !invData.success || !invData.slots) {
+          checkList.innerHTML = `<li style="color:var(--warning); line-height:1.4;">⚠️ Envanter bilgisi henüz sunucudan alınmadı.<br><span style="font-size:0.75rem; color:var(--text-muted);">Tavsiye: Envanter sekmesini açarak veya tazeleyerek güncel eşya listesini çekebilirsiniz.</span></li>`;
+          startBtn.removeAttribute('disabled');
+          startBtn.style.cursor = 'pointer';
+          startBtn.style.opacity = '1';
+          return;
+        }
+
+        const currentCounts = {};
+        invData.slots.forEach(slot => {
+          if (slot && slot.name) {
+            const name = slot.name.replace('minecraft:', '');
+            currentCounts[name] = (currentCounts[name] || 0) + slot.count;
+          }
+        });
+
+        let hasAll = true;
+        let checkHtml = '';
+
+        Object.entries(requiredCounts).forEach(([blockName, reqCount]) => {
+          const normName = blockName.replace('minecraft:', '');
+          const currentCount = currentCounts[normName] || 0;
+          const diff = reqCount - currentCount;
+
+          if (diff > 0) {
+            hasAll = false;
+            checkHtml += `<li style="color:var(--error); margin-bottom:4px; display:flex; justify-content:space-between; font-size:0.78rem;">
+              <span>❌ ${normName}</span>
+              <span>Eksik: ${diff} (Mevcut: ${currentCount}/${reqCount})</span>
+            </li>`;
+          } else {
+            checkHtml += `<li style="color:var(--success); margin-bottom:4px; display:flex; justify-content:space-between; font-size:0.78rem;">
+              <span>✅ ${normName}</span>
+              <span>Yeterli (${currentCount}/${reqCount})</span>
+            </li>`;
+          }
+        });
+
+        checkList.innerHTML = checkHtml;
+
+        startBtn.removeAttribute('disabled');
+        startBtn.style.cursor = 'pointer';
+        if (hasAll) {
+          startBtn.style.opacity = '1';
+          startBtn.style.background = 'var(--success)';
+        } else {
+          startBtn.style.opacity = '0.9';
+          startBtn.style.background = 'var(--warning)';
+        }
+      };
+
+      if (uploadBtn && fileInput) {
+        uploadBtn.addEventListener('click', () => {
+          fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            try {
+              const data = JSON.parse(evt.target.result);
+              if (!Array.isArray(data)) {
+                throw new Error('Dosya bir dizi formatında olmalı!');
+              }
+              if (data.length === 0) {
+                throw new Error('Yapı şablonu boş.');
+              }
+
+              const valid = data.every(b => b && typeof b.x === 'number' && typeof b.y === 'number' && typeof b.z === 'number' && typeof b.block === 'string');
+              if (!valid) {
+                throw new Error('Her blokta x,y,z sayı ve block metin olmalıdır.');
+              }
+
+              structureData = data;
+              blockCountSpan.textContent = `${data.length} Blok`;
+              
+              const blockCounts = {};
+              data.forEach(b => {
+                const norm = b.block.replace('minecraft:', '');
+                blockCounts[norm] = (blockCounts[norm] || 0) + 1;
+              });
+
+              let blockSummary = Object.entries(blockCounts).map(([name, count]) => `${count}x ${name}`).join(', ');
+              if (blockSummary.length > 80) blockSummary = blockSummary.substring(0, 80) + '...';
+              infoDiv.textContent = `Bloklar: ${blockSummary}`;
+
+              statusBox.classList.remove('hidden');
+              clearBtn.classList.remove('hidden');
+
+              runLocalInventoryCheck();
+
+            } catch (err) {
+              showToast('error', 'Yükleme Hatası: ' + err.message);
+              structureData = null;
+              statusBox.classList.add('hidden');
+              clearBtn.classList.add('hidden');
+              checkDiv.classList.add('hidden');
+              startBtn.setAttribute('disabled', 'true');
+              startBtn.style.cursor = 'not-allowed';
+              startBtn.style.opacity = '0.5';
+            }
+          };
+          reader.readAsText(file);
+        });
+
+        clearBtn.addEventListener('click', () => {
+          fileInput.value = '';
+          if (presetSelect) presetSelect.value = '';
+          structureData = null;
+          statusBox.classList.add('hidden');
+          clearBtn.classList.add('hidden');
+          checkDiv.classList.add('hidden');
+          startBtn.setAttribute('disabled', 'true');
+          startBtn.style.cursor = 'not-allowed';
+          startBtn.style.opacity = '0.5';
+          progressBox.classList.add('hidden');
+          stopBtn.classList.add('hidden');
+          startBtn.classList.remove('hidden');
+        });
+
+        startBtn.addEventListener('click', () => {
+          if (!structureData) return;
+          if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+            const rot = rotationSelect.value === 'auto' ? 'auto' : (parseInt(rotationSelect.value, 10) || 0);
+            let origin = null;
+
+            if (originTypeSelect && originTypeSelect.value === 'custom') {
+              const xVal = parseFloat(xInput.value);
+              const yVal = parseFloat(yInput.value);
+              const zVal = parseFloat(zInput.value);
+
+              if (isNaN(xVal) || isNaN(yVal) || isNaN(zVal)) {
+                showToast('error', 'Lütfen geçerli X, Y ve Z koordinatlarını girin!');
+                return;
+              }
+              origin = { x: xVal, y: yVal, z: zVal };
+            }
+
+            socket.emit('start-builder', { 
+              botId: bot.id, 
+              structure: structureData, 
+              rotation: rot,
+              origin: origin
+            });
+            showToast('success', 'İnşaat süreci sunucuya bildirildi.');
+            
+            startBtn.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
+            progressBox.classList.remove('hidden');
+          } else {
+            showToast('warning', 'Yalnızca çevrimiçi botlarla inşaat yapabilirsiniz.');
+          }
+        });
+
+        stopBtn.addEventListener('click', () => {
+          if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+            socket.emit('stop-builder', { botId: bot.id });
+            showToast('info', 'İnşaat durduruluyor...');
+          }
+        });
+
+        card.addEventListener('inventory-changed', () => {
+          if (structureData) {
+            runLocalInventoryCheck();
+          }
+        });
+      }
+
+      return card;
+    }
+
+    function updateBotCard(card, bot) {
+      const statusDot = card.querySelector('.status-dot');
+      const statusText = card.querySelector('#status-' + bot.id);
+      const nameEl = card.querySelector('.bot-name');
+
+      const statusClass = bot.status;
+      const statusLabel = {
+        online: 'Çevrimiçi',
+        offline: 'Çevrimdışı',
+        error: 'Hata',
+        connecting: 'Bağlanıyor...'
+      }[bot.status] || bot.status;
+
+      if (statusDot) statusDot.className = 'status-dot ' + statusClass;
+      if (statusText) statusText.textContent = statusLabel;
+      if (nameEl) nameEl.textContent = bot.name;
+
+
+
+      const coordsEl = card.querySelector('#coords-' + bot.id);
+      if (coordsEl && bot.x !== null) {
+        coordsEl.textContent = `X:${bot.x} Y:${bot.y} Z:${bot.z}`;
+      }
+
+      updateAntiAfkButton(bot.id, bot.antiAfkEnabled);
+      updateAutoReconnectButton(bot.id, bot.autoReconnectEnabled);
+    }
+
+    function updateBotStats(botData) {
+      const healthEl = document.getElementById('health-' + botData.id);
+      const foodEl = document.getElementById('food-' + botData.id);
+      const xpEl = document.getElementById('xp-' + botData.id);
+      const posEl = document.getElementById('pos-' + botData.id);
+      const coordsEl = document.getElementById('coords-' + botData.id);
+
+      if (botData.health !== null) {
+        if (healthEl) healthEl.textContent = `${Math.floor(botData.health)}/${botData.maxHealth || 20}`;
+        if (foodEl) foodEl.textContent = `${Math.floor(botData.food)}/20`;
+        if (xpEl) xpEl.textContent = `Lv.${botData.level || 0}`;
+        if (posEl) posEl.textContent = `X:${botData.x} Y:${botData.y} Z:${botData.z}`;
+        if (coordsEl) coordsEl.textContent = `X:${botData.x} Y:${botData.y} Z:${botData.z}`;
+      } else {
+        if (healthEl) healthEl.textContent = '-';
+        if (foodEl) foodEl.textContent = '-';
+        if (xpEl) xpEl.textContent = '-';
+        if (posEl) posEl.textContent = '-';
+      }
+    }
+
+    function updateAntiAfkButton(botId, enabled) {
+      const btn = document.getElementById('afk-btn-' + botId);
+      if (btn) btn.classList.toggle('active', enabled);
+    }
+
+    function updateAutoReconnectButton(botId, enabled) {
+      const btn = document.getElementById('autoreconnect-btn-' + botId);
+      if (btn) btn.classList.toggle('active', enabled !== false);
+    }
+
+    const MC_COLORS = {
+      'black': '#768390', // Slate gray to be readable on dark background
+      'dark_blue': '#388bfd', // Brightened dark blue
+      'dark_green': '#3fb950', // Brightened dark green
+      'dark_aqua': '#09b5ff', // Brightened dark aqua
+      'dark_red': '#f85149', // Brightened dark red
+      'dark_purple': '#bc34fa', // Brightened dark purple
+      'gold': '#ffaa00',
+      'gray': '#aaaaaa',
+      'dark_gray': '#9ca3af', // Brightened dark gray
+      'blue': '#5555ff',
+      'green': '#55ff55',
+      'aqua': '#55ffff',
+      'red': '#ff5555',
+      'light_purple': '#ff55ff',
+      'yellow': '#ffff55',
+      'white': '#ffffff'
+    };
+
+    const MC_CODE_MAP = {
+      '0': { color: '#768390' }, // Slate gray to be readable on dark background
+      '1': { color: '#388bfd' }, // Brightened dark blue
+      '2': { color: '#3fb950' }, // Brightened dark green
+      '3': { color: '#09b5ff' }, // Brightened dark aqua
+      '4': { color: '#f85149' }, // Brightened dark red
+      '5': { color: '#bc34fa' }, // Brightened dark purple
+      '6': { color: '#ffaa00' },
+      '7': { color: '#aaaaaa' },
+      '8': { color: '#9ca3af' }, // Brightened dark gray
+      '9': { color: '#5555ff' },
+      'a': { color: '#55ff55' },
+      'b': { color: '#55ffff' },
+      'c': { color: '#ff5555' },
+      'd': { color: '#ff55ff' },
+      'e': { color: '#ffff55' },
+      'f': { color: '#ffffff' },
+      'k': { obfuscated: true }, // Add Support for Obfuscate format code
+      'l': { bold: true },
+      'm': { strikethrough: true },
+      'n': { underline: true },
+      'o': { italic: true },
+      'r': { reset: true }
+    };
+
+    function parseMinecraftCodes(str) {
+      if (!str) return '';
+      
+      // Store safe span tags in a temporary list to bypass HTML escaping safely
+      const placeholders = [];
+      let working = str.replace(/^%s\s*/i, '');
+      
+      // Pattern to match safe span tags with style="color:..." or style="font-weight:..." or similar
+      const spanRegex = /<span\s+style="([^"]*)"\s*>/gi;
+      working = working.replace(spanRegex, (match, styleContent) => {
+        // Validate styleContent for safety (only color, font-weight, font-style, text-decoration)
+        const isSafe = /^[a-zA-Z0-9\s#():;,-]+$/.test(styleContent) && 
+                       !styleContent.toLowerCase().includes('expression') && 
+                       !styleContent.toLowerCase().includes('javascript') &&
+                       !styleContent.toLowerCase().includes('behavior');
+        if (isSafe) {
+          const placeholder = `__SPAN_PLACEHOLDER_${placeholders.length}__`;
+          placeholders.push(`<span style="${styleContent}">`);
+          return placeholder;
+        }
+        return match;
+      });
+      
+      // Also match </span> closing tags
+      working = working.replace(/<\/span>/gi, (match) => {
+        const placeholder = `__SPAN_PLACEHOLDER_${placeholders.length}__`;
+        placeholders.push('</span>');
+        return placeholder;
+      });
+      
+      // Now safe escape HTML of the rest
+      working = escapeHtml(working);
+      
+      // Convert Minecraft 1.16+ hex color format (§x§1§9§f§f§2§3) to simple hex representation (§#19ff23)
+      working = working.replace(/§x§([a-f0-9A-F])§([a-f0-9A-F])§([a-f0-9A-F])§([a-f0-9A-F])§([a-f0-9A-F])§([a-f0-9A-F])/gi, '§#$1$2$3$4$5$6');
+      
+      const parts = working.split('§');
+      let html = parts[0];
+      let currentStyles = {
+        color: null,
+        bold: false,
+        italic: false,
+        underline: false,
+        strikethrough: false,
+        obfuscated: false
+      };
+      
+      const activeSpans = [];
+      const closeAll = () => {
+        let closed = '';
+        while (activeSpans.length > 0) {
+          activeSpans.pop();
+          closed += '</span>';
+        }
+        return closed;
+      };
+      
+      for (let i = 1; i < parts.length; i++) {
+        const part = parts[i];
+        if (part.length === 0) continue;
+        
+        let code = '';
+        let text = '';
+        
+        if (part.startsWith('#') && part.length >= 7) {
+          const hexColor = part.substring(0, 7);
+          text = part.substring(7);
+          html += closeAll();
+          currentStyles.color = hexColor;
+          currentStyles.bold = false;
+          currentStyles.italic = false;
+          currentStyles.underline = false;
+          currentStyles.strikethrough = false;
+          currentStyles.obfuscated = false;
+        } else {
+          code = part.charAt(0).toLowerCase();
+          text = part.substring(1);
+          
+          if (MC_CODE_MAP[code]) {
+            const modifier = MC_CODE_MAP[code];
+            if (modifier.reset) {
+              html += closeAll();
+              currentStyles = { color: null, bold: false, italic: false, underline: false, strikethrough: false, obfuscated: false };
+            } else if (modifier.color) {
+              html += closeAll();
+              currentStyles.color = modifier.color;
+              currentStyles.bold = false;
+              currentStyles.italic = false;
+              currentStyles.underline = false;
+              currentStyles.strikethrough = false;
+              currentStyles.obfuscated = false;
+            } else {
+              if (modifier.bold) currentStyles.bold = true;
+              if (modifier.italic) currentStyles.italic = true;
+              if (modifier.underline) currentStyles.underline = true;
+              if (modifier.strikethrough) currentStyles.strikethrough = true;
+              if (modifier.obfuscated) currentStyles.obfuscated = true;
+            }
+          }
+        }
+        
+        if (text.length > 0) {
+          let styleStr = '';
+          if (currentStyles.color) styleStr += `color:${currentStyles.color};`;
+          if (currentStyles.bold) styleStr += `font-weight:bold;`;
+          if (currentStyles.italic) styleStr += `font-style:italic;`;
+          if (currentStyles.obfuscated) styleStr += `letter-spacing:1px;font-family:monospace;filter:blur(1px);opacity:0.85;text-shadow:0 0 1px currentColor;`;
+          
+          let textDec = [];
+          if (currentStyles.underline) textDec.push('underline');
+          if (currentStyles.strikethrough) textDec.push('line-through');
+          if (textDec.length > 0) styleStr += `text-decoration:${textDec.join(' ')};`;
+          
+          if (styleStr) {
+            html += `<span style="${styleStr}">`;
+            activeSpans.push(true);
+          }
+          html += text;
+        }
+      }
+      
+      html += closeAll();
+      
+      // Restore the safe placeholders
+      for (let i = 0; i < placeholders.length; i++) {
+        html = html.replace(`__SPAN_PLACEHOLDER_${i}__`, placeholders[i]);
+      }
+      
+      return html;
+    }
+
+    function parseMinecraftJson(comp) {
+      if (!comp) return '';
+      if (typeof comp === 'string' || typeof comp === 'number' || typeof comp === 'boolean') {
+        return parseMinecraftCodes(String(comp));
+      }
+      if (Array.isArray(comp)) {
+        return comp.map(item => parseMinecraftJson(item)).join('');
+      }
+      
+      let styleStr = '';
+      if (comp.color) {
+        const hex = MC_COLORS[comp.color.toLowerCase()] || comp.color;
+        styleStr += `color:${hex};`;
+      }
+      if (comp.bold === true || comp.bold === 'true') {
+        styleStr += `font-weight:bold;`;
+      }
+      if (comp.italic === true || comp.italic === 'true') {
+        styleStr += `font-style:italic;`;
+      }
+      
+      let textDec = [];
+      if (comp.underlined === true || comp.underlined === 'true') textDec.push('underline');
+      if (comp.strikethrough === true || comp.strikethrough === 'true') textDec.push('line-through');
+      if (textDec.length > 0) {
+        styleStr += `text-decoration:${textDec.join(' ')};`;
+      }
+      
+      let cleanText = comp.text || '';
+      if (comp.translate) {
+        let template = comp.translate;
+        if (template === 'chat.type.text' || template === 'chat.type.announcement') {
+          template = '<%s> %s';
+        } else if (template === 'chat.type.emote') {
+          template = '* %s %s';
+        } else if (template === 'multiplayer.player.joined') {
+          template = '%s joined the game';
+        } else if (template === 'multiplayer.player.left') {
+          template = '%s left the game';
+        }
+        
+        if (comp.with && Array.isArray(comp.with)) {
+          let formatted = template;
+          for (const arg of comp.with) {
+            const argHtml = parseMinecraftJson(arg);
+            if (formatted.includes('%s')) {
+              formatted = formatted.replace('%s', argHtml);
+            } else {
+              formatted += ' ' + argHtml;
+            }
+          }
+          cleanText = formatted;
+        } else {
+          cleanText = template;
+        }
+      }
+      
+      let innerHtml = (comp.translate && comp.with) ? cleanText : parseMinecraftCodes(cleanText);
+      let textHtml = '';
+      
+      if (styleStr && innerHtml.length > 0) {
+        textHtml += `<span style="${styleStr}">${innerHtml}</span>`;
+      } else {
+        textHtml += innerHtml;
+      }
+      
+      if (comp.extra && Array.isArray(comp.extra)) {
+        textHtml += comp.extra.map(extraComp => {
+          let childHtml = parseMinecraftJson(extraComp);
+          if (styleStr && childHtml.length > 0 && !childHtml.startsWith('<span style="color:')) {
+            return `<span style="${styleStr}">${childHtml}</span>`;
+          }
+          return childHtml;
+        }).join('');
+      }
+      
+      return textHtml;
+    }
+
+    function getFormattedMinecraftMessage(text, json) {
+      if (json) {
+        try {
+          const html = parseMinecraftJson(json);
+          if (html && html.trim()) return html;
+        } catch (e) {
+          console.warn('[FormattedMsg] parseMinecraftJson hatası:', e);
+        }
+      }
+      return parseMinecraftCodes(text);
+    }
+
+    function addConsoleMessage(botId, type, text, timestamp, json = null) {
+      // Konsol susturulmuşsa script/system mesajlarını gösterme
+      if (state.mutedConsoles.has(botId) && (type === 'system' || type === 'info')) return;
+
+      const consoleEl = document.getElementById('console-' + botId);
+      if (!consoleEl) return;
+
+      const line = document.createElement('div');
+      line.className = 'console-line ' + type;
+      const htmlText = getFormattedMinecraftMessage(text, json);
+      line.innerHTML = '<span class="timestamp">' + timestamp + '</span>' + htmlText;
+
+      consoleEl.appendChild(line);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+
+      while (consoleEl.children.length > 500) {
+        consoleEl.removeChild(consoleEl.firstChild);
+      }
+    }
+
+
+
+    // ── Look Pad ─────────────────────────────────────────────
+    function initLookPad(canvas, botId) {
+      const ctx = canvas.getContext('2d');
+      let dragging = false;
+      let lastX = 0, lastY = 0;
+      const SENS = 0.008;
+
+      function drawCrosshair() {
+        const w = canvas.width, h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = 'rgba(88,166,255,0.08)';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(88,166,255,0.25)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(w/2, 0); ctx.lineTo(w/2, h);
+        ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(88,166,255,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(w/2, h/2, 6, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.arc(w/2, h/2, 2, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(88,166,255,0.5)';
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('drag to look', w/2, h - 6);
+      }
+
+      drawCrosshair();
+
+      const sendLook = (dx, dy) => {
+        if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+          socket.emit('bot-move', { botId, action: 'lookDelta', state: { dyaw: dx * SENS, dpitch: dy * SENS } });
+        }
+      };
+
+      const start = (x, y) => { dragging = true; lastX = x; lastY = y; canvas.style.borderColor = 'var(--accent)'; };
+      const move = (x, y) => {
+        if (!dragging) return;
+        const dx = x - lastX, dy = y - lastY;
+        lastX = x; lastY = y;
+        if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) sendLook(dx, dy);
+      };
+      const end = () => { dragging = false; canvas.style.borderColor = ''; };
+
+      canvas.addEventListener('mousedown', e => start(e.offsetX, e.offsetY));
+      canvas.addEventListener('mousemove', e => move(e.offsetX, e.offsetY));
+      canvas.addEventListener('mouseup', end);
+      canvas.addEventListener('mouseleave', end);
+      canvas.addEventListener('touchstart', e => { e.preventDefault(); const t = e.touches[0]; const r = canvas.getBoundingClientRect(); start(t.clientX - r.left, t.clientY - r.top); }, { passive: false });
+      canvas.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; const r = canvas.getBoundingClientRect(); move(t.clientX - r.left, t.clientY - r.top); }, { passive: false });
+      canvas.addEventListener('touchend', end);
+    }
+
+    // ── Inventory Modal ──────────────────────────────────────
+    const INV_ICONS = {
+      // Block/tool emojis for common items
+      'diamond_sword':'⚔️','iron_sword':'⚔️','stone_sword':'⚔️','wooden_sword':'⚔️','netherite_sword':'⚔️',
+      'diamond_pickaxe':'⛏️','iron_pickaxe':'⛏️','stone_pickaxe':'⛏️','wooden_pickaxe':'⛏️','netherite_pickaxe':'⛏️',
+      'diamond_axe':'🪓','iron_axe':'🪓','stone_axe':'🪓','wooden_axe':'🪓',
+      'bow':'🏹','crossbow':'🏹','arrow':'➳','trident':'🔱',
+      'diamond_helmet':'⛑️','iron_helmet':'⛑️','leather_helmet':'⛑️','netherite_helmet':'⛑️','diamond_chestplate':'🛡️','iron_chestplate':'🛡️',
+      'cooked_beef':'🥩','beef':'🥩','porkchop':'🥓','cooked_porkchop':'🥓','bread':'🍞','apple':'🍎','golden_apple':'🍎',
+      'enchanted_golden_apple':'🍎','carrot':'🥕','potato':'🥔','baked_potato':'🥔','mushroom_stew':'🍲',
+      'coal':'⬛','iron_ingot':'🔩','gold_ingot':'🟡','diamond':'💎','emerald':'💚','netherite_ingot':'⬛',
+      'stick':'🟫','torch':'🔦','crafting_table':'🪵','furnace':'🔥','chest':'📦','ender_chest':'📦',
+      'dirt':'🟫','grass_block':'🟩','stone':'⬜','cobblestone':'⬜','sand':'🟨','gravel':'⬜',
+      'oak_log':'🪵','oak_planks':'🪵','glass':'⬜','wool':'⬜',
+      'experience_bottle':'🧪','potion':'🧪','splash_potion':'🧪','ender_pearl':'🔮',
+      'map':'🗺️','compass':'🧭','clock':'⏱️','book':'📖','written_book':'📖','enchanted_book':'📖',
+      'saddle':'🐴','name_tag':'🏷️','lead':'🔗',
+      'tnt':'💣','flint_and_steel':'🔥',
+    };
+
+    function getItemIcon(name) {
+      if (!name) return '·';
+      const k = name.toLowerCase().replace(/ /g,'_');
+      return INV_ICONS[k] || '📦';
+    }
+
+    // Modern 2D Live Radar Drawing loop
+    function drawBotRadar(bot) {
+      const canvas = document.getElementById('radar-canvas-' + bot.id);
+      if (!canvas) return;
+      
+      // Only draw if the radar tab is actually active/visible in the viewport
+      const pane = document.getElementById('pane-radar-' + bot.id);
+      if (!pane || pane.classList.contains('hidden')) return;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const centerX = w / 2;
+      const centerY = h / 2;
+      const radius = Math.min(centerX, centerY) - 8;
+
+      // Dark space-background representation
+      ctx.fillStyle = '#080a0f';
+      ctx.fillRect(0, 0, w, h);
+
+      const range = (state.radarRanges && state.radarRanges[bot.id]) || 32;
+      const scale = radius / range;
+
+      // Guidance circle lines
+      ctx.strokeStyle = 'rgba(88, 166, 255, 0.08)';
+      ctx.lineWidth = 1;
+
+      const steps = 4;
+      for (let i = 1; i <= steps; i++) {
+        const r = radius * (i / steps);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+        ctx.font = '8px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(Math.round(range * (i / steps)) + 'm', centerX + 4, centerY - r + 3);
+      }
+
+      // Horizontal / vertical cross axes
+      ctx.beginPath();
+      ctx.moveTo(centerX - radius, centerY);
+      ctx.lineTo(centerX + radius, centerY);
+      ctx.moveTo(centerX, centerY - radius);
+      ctx.lineTo(centerX, centerY + radius);
+      ctx.stroke();
+
+      if (bot.x === null || bot.y === null || bot.z === null) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Konum Bekleniyor...', centerX, centerY);
+        return;
+      }
+
+      // Live Update Radar Coordinates overlay
+      const coordsEl = document.getElementById('radar-coords-' + bot.id);
+      if (coordsEl) {
+        coordsEl.textContent = `X: ${bot.x} | Y: ${bot.y} | Z: ${bot.z}`;
+      }
+
+      // Draw entities relative to bot position
+      if (Array.isArray(bot.entities)) {
+        for (const ent of bot.entities) {
+          const dx = ent.x - bot.x;
+          const dz = ent.z - bot.z;
+
+          // Project to 2D
+          const cx = centerX + dx * scale;
+          const cy = centerY + dz * scale;
+
+          // Clip to round radar range boundaries
+          const dist = Math.sqrt((cx - centerX) ** 2 + (cy - centerY) ** 2);
+          if (dist <= radius) {
+            ctx.beginPath();
+            if (ent.type === 'player') {
+              ctx.fillStyle = '#58a6ff';
+              ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.fillStyle = '#ffffff';
+              ctx.font = 'bold 8px system-ui';
+              ctx.textAlign = 'center';
+              ctx.fillText(ent.name, cx, cy - 6);
+            } else if (ent.type === 'mob') {
+              ctx.fillStyle = ent.isHostile ? '#ff7b72' : '#ecc94b';
+              ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+              ctx.font = '7px monospace';
+              ctx.textAlign = 'center';
+              ctx.fillText(ent.name, cx, cy + 8);
+            } else {
+              ctx.fillStyle = '#7ee787';
+              ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      }
+
+      // Draw the Bot itself at the center pointing towards yaw direction
+      const yaw = bot.yaw || 0;
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      
+      // Mineflayer anti-clockwise yaw starts from South.
+      // Top of canvas is North (-Z).
+      const headingAngle = -yaw + Math.PI;
+      ctx.rotate(headingAngle);
+
+      ctx.fillStyle = '#7ee787'; // Bright lime/green arrow for bot
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+
+      ctx.beginPath();
+      ctx.moveTo(0, -8);
+      ctx.lineTo(-5, 5);
+      ctx.lineTo(0, 2);
+      ctx.lineTo(5, 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // Global action dispatcher for inline buttons
+    window.doLiveCardInvAction = function(botId, action, slot) {
+      if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+        socket.emit('inventory-action', { botId, action, slot });
+      } else {
+        showToast('success', `${action.toUpperCase()} eylemi slot #${slot} için tetiklendi (Çevrimdışı)`);
+      }
+    };
+
+    // Card Live Inventory visualizer grid builder
+    function renderCardLiveInventory(data) {
+      const botId = data.botId;
+      const card = document.getElementById('card-' + botId);
+      if (!card) return;
+
+      const pane = document.getElementById('pane-inventory-vis-' + botId);
+      if (!pane || pane.classList.contains('hidden')) return;
+
+      const armorEl = card.querySelector('#live-inv-armor-' + botId);
+      const mainEl = card.querySelector('#live-inv-main-' + botId);
+      const hotbarEl = card.querySelector('#live-inv-hotbar-' + botId);
+      const activeHandEl = card.querySelector('#live-inv-held-item-' + botId);
+
+      if (!armorEl || !mainEl || !hotbarEl) return;
+
+      if (!data.success) {
+        mainEl.innerHTML = `<div style="color:var(--error);padding:10px;font-size:0.8rem;">Envanter verisi alınamadı</div>`;
+        return;
+      }
+
+      const { slots, heldItemSlot } = data;
+
+      if (heldItemSlot !== undefined) {
+        const activeItem = slots[36 + heldItemSlot];
+        if (activeItem && activeItem.name) {
+          activeHandEl.textContent = `Aktif El (Slot ${heldItemSlot + 1}): ${activeItem.displayName} (x${activeItem.count})`;
+        } else {
+          activeHandEl.textContent = `Aktif El (Slot ${heldItemSlot + 1}): El Boş`;
+        }
+      }
+
+      function makeLiveSlot(slotData, extraClass) {
+        const div = document.createElement('div');
+        div.className = 'live-inv-slot' + (extraClass ? ' ' + extraClass : '');
+        div.dataset.slot = slotData.slot;
+
+        if (slotData.name) {
+          const icon = document.createElement('div');
+          icon.className = 'live-slot-icon';
+          icon.textContent = getItemIcon(slotData.name);
+          div.appendChild(icon);
+
+          if (slotData.count > 1) {
+            const badge = document.createElement('span');
+            badge.className = 'live-slot-count';
+            badge.textContent = slotData.count;
+            div.appendChild(badge);
+          }
+        } else {
+          div.classList.add('empty');
+        }
+
+        div.addEventListener('click', () => {
+          card.querySelectorAll('.live-inv-slot').forEach(s => s.classList.remove('selected'));
+          div.classList.add('selected');
+
+          const detailEl = card.querySelector('#live-inv-item-detail-' + botId);
+          if (!detailEl) return;
+
+          if (slotData.name) {
+            let enchantHtml = '';
+            if (slotData.enchants && slotData.enchants.length > 0) {
+              enchantHtml = `
+                <div class="item-detail-enchants" style="color:#bc8cff;font-size:0.75rem;margin-top:2px;">
+                  ${slotData.enchants.map(e => `🔮 ${e.name} ${e.level}`).join('<br>')}
+                </div>
+              `;
+            }
+
+            let nbtHtml = '';
+            if (slotData.nbt) {
+              nbtHtml = `<div style="color:#8b949e;font-size:0.6rem;font-family:monospace;white-space:pre;max-height:60px;overflow-y:auto;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;margin-top:4px;">NBT Detay:\n${slotData.nbt}</div>`;
+            }
+
+            detailEl.innerHTML = `
+              <div class="item-detail-card" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:#161b22;font-size:0.8rem;text-align:left;">
+                <div style="font-weight:bold;color:var(--accent);display:flex;align-items:center;gap:6px;">
+                  <span>${getItemIcon(slotData.name)}</span>
+                  <span>${escapeHtml(slotData.displayName)}</span>
+                  <span style="color:var(--text-muted);font-size:0.75rem;">(x${slotData.count})</span>
+                </div>
+                <div style="font-size:0.7rem;color:var(--text-muted);font-family:monospace;margin-top:2px;">kod: ${slotData.name} | slot: ${slotData.slot}</div>
+                ${enchantHtml}
+                ${nbtHtml}
+                <div class="item-quick-actions" style="display:flex;gap:6px;margin-top:8px;">
+                  <button class="btn-xs btn-panel-action" style="flex:1;" onclick="doLiveCardInvAction('${botId}', 'right-click', ${slotData.slot})">🖱️ Kullan</button>
+                  <button class="btn-xs btn-panel-action" style="flex:1;" onclick="doLiveCardInvAction('${botId}', 'drop-one', ${slotData.slot})">🪂 1 Adet At</button>
+                  <button class="btn-xs btn-panel-action" style="flex:1;background:#da3637;border-color:#b62b2c;" onclick="doLiveCardInvAction('${botId}', 'drop-all', ${slotData.slot})">💨 Hepsini At</button>
+                </div>
+              </div>
+            `;
+          } else {
+            detailEl.innerHTML = `<div class="detail-placeholder" style="color:var(--text-muted);font-size:0.75rem;text-align:center;padding:10px;border:1px dashed var(--border);border-radius:4px;background:#0d1117;">Boş slot (#${slotData.slot})</div>`;
+          }
+        });
+
+        return div;
+      }
+
+      armorEl.innerHTML = '';
+      mainEl.innerHTML = '';
+      hotbarEl.innerHTML = '';
+
+      // Armor positions 5-8 and offhand 40
+      [5, 6, 7, 8].forEach(i => {
+        armorEl.appendChild(makeLiveSlot(slots[i] || { slot: i, name: null, count: 0 }, 'armor'));
+      });
+      // Offhand slot
+      armorEl.appendChild(makeLiveSlot(slots[40] || { slot: 40, name: null, count: 0 }, 'offhand'));
+
+      // Main compartments 9-35
+      for (let i = 9; i <= 35; i++) {
+        mainEl.appendChild(makeLiveSlot(slots[i] || { slot: i, name: null, count: 0 }));
+      }
+
+      // Hotbars 36-44
+      for (let i = 36; i <= 44; i++) {
+        const extraClass = (i - 36) === heldItemSlot ? 'hotbar-active' : '';
+        hotbarEl.appendChild(makeLiveSlot(slots[i] || { slot: i, name: null, count: 0 }, extraClass));
+      }
+    }
+
+    function openInventoryModal(botId, botName) {
+      state.currentInventoryBotId = botId;
+      state.selectedInvSlot = null;
+      document.getElementById('inv-modal-title').textContent = botName + ' — Envanter';
+      document.getElementById('inv-item-detail').innerHTML = '<div style="color:var(--text-muted);margin-bottom:8px;">Bir eşyaya tıkla</div>';
+      document.getElementById('inv-armor').innerHTML = '';
+      document.getElementById('inv-main').innerHTML = '';
+      document.getElementById('inv-hotbar').innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;padding:10px;">Yükleniyor...</div>';
+      els.modalInventory.classList.add('active');
+
+      if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+        socket.emit('get-inventory', botId);
+      } else {
+        // Demo envanter
+        const demoSlots = Array.from({length: 45}, (_, i) => {
+          if (i === 0) return { slot: 0, name: 'diamond_sword', displayName: 'Diamond Sword', count: 1, nbt: '{"Damage":0}', enchants: [{name:'Sharpness',level:5},{name:'Unbreaking',level:3}] };
+          if (i === 36) return { slot: 36, name: 'cooked_beef', displayName: 'Cooked Beef', count: 64, nbt: null, enchants: [] };
+          if (i === 37) return { slot: 37, name: 'diamond_pickaxe', displayName: 'Diamond Pickaxe', count: 1, nbt: '{"Damage":10}', enchants: [{name:'Efficiency',level:5},{name:'Fortune',level:3}] };
+          return { slot: i, name: null, count: 0 };
+        });
+        renderInventoryModal({ success: true, slots: demoSlots, heldItemSlot: 0 });
+      }
+    }
+
+    function renderInventoryModal(data) {
+      if (!data.success) {
+        document.getElementById('inv-hotbar').innerHTML = `<div style="color:var(--error);padding:10px;">${data.message || 'Hata'}</div>`;
+        return;
+      }
+
+      const { slots, heldItemSlot } = data;
+
+      // armor: slots 5-8 (head chest legs feet)
+      // offhand: slot 40
+      // inventory: 9-35
+      // hotbar: 36-44
+
+      function makeSlot(slotData, extraClass) {
+        const div = document.createElement('div');
+        div.className = 'inv-slot' + (extraClass ? ' ' + extraClass : '');
+        div.dataset.slot = slotData.slot;
+        if (slotData.name) {
+          const icon = document.createElement('div');
+          icon.className = 'slot-icon';
+          icon.textContent = getItemIcon(slotData.name);
+          div.appendChild(icon);
+          const name = document.createElement('div');
+          name.className = 'slot-name';
+          name.textContent = slotData.displayName || slotData.name;
+          div.appendChild(name);
+          if (slotData.count > 1) {
+            const count = document.createElement('div');
+            count.className = 'slot-count';
+            count.textContent = slotData.count;
+            div.appendChild(count);
+          }
+        } else {
+          div.style.color = '#333';
+          div.textContent = slotData.slot;
+        }
+        div.addEventListener('click', () => selectInventorySlot(slotData));
+        return div;
+      }
+
+      const armorEl = document.getElementById('inv-armor');
+      const mainEl = document.getElementById('inv-main');
+      const hotbarEl = document.getElementById('inv-hotbar');
+      armorEl.innerHTML = '';
+      mainEl.innerHTML = '';
+      hotbarEl.innerHTML = '';
+
+      // Armor 5-8 + offhand 45
+      [5, 6, 7, 8].forEach(i => {
+        armorEl.appendChild(makeSlot(slots[i] || { slot: i, name: null, count: 0 }));
+      });
+      armorEl.appendChild(makeSlot(slots[40] || { slot: 40, name: null, count: 0 }));
+
+      // Main inventory 9-35
+      for (let i = 9; i <= 35; i++) {
+        mainEl.appendChild(makeSlot(slots[i] || { slot: i, name: null, count: 0 }));
+      }
+
+      // Hotbar 36-44
+      for (let i = 36; i <= 44; i++) {
+        const extraClass = (i - 36) === heldItemSlot ? 'hotbar-active' : '';
+        hotbarEl.appendChild(makeSlot(slots[i] || { slot: i, name: null, count: 0 }, extraClass));
+      }
+    }
+
+    function selectInventorySlot(slotData) {
+      state.selectedInvSlot = slotData.slot;
+
+      // Highlight
+      document.querySelectorAll('.inv-slot.selected').forEach(el => el.classList.remove('selected'));
+      const el = document.querySelector(`.inv-slot[data-slot="${slotData.slot}"]`);
+      if (el) el.classList.add('selected');
+
+      const detail = document.getElementById('inv-item-detail');
+      if (!slotData.name) {
+        detail.innerHTML = '<div style="color:var(--text-muted);">Boş slot #' + slotData.slot + '</div>';
+        return;
+      }
+
+      const enchantHtml = slotData.enchants && slotData.enchants.length
+        ? slotData.enchants.map(e => `<span style="color:#b07aff;font-size:0.75rem;">${e.name} ${e.level}</span>`).join('<br>')
+        : '<span style="color:var(--text-muted);font-size:0.75rem;">Büyü yok</span>';
+
+      const nbtHtml = slotData.nbt
+        ? `<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:0.72rem;color:var(--text-muted);">NBT</summary><pre style="font-size:0.65rem;color:var(--text-secondary);overflow:auto;max-height:80px;margin-top:4px;">${escapeHtml(slotData.nbt)}</pre></details>`
+        : '';
+
+      detail.innerHTML = `
+        <div style="font-size:1.5rem;margin-bottom:4px;">${getItemIcon(slotData.name)}</div>
+        <div style="font-weight:700;color:var(--text-primary);margin-bottom:2px;">${escapeHtml(slotData.displayName || slotData.name)}</div>
+        <div style="color:var(--text-muted);font-size:0.72rem;margin-bottom:6px;">x${slotData.count} • Slot #${slotData.slot}</div>
+        ${enchantHtml}
+        ${nbtHtml}
+        <div class="inv-item-action">
+          <button class="inv-action-btn" onclick="doInvAction('left-click')">🖱️ Sol Tıkla</button>
+          <button class="inv-action-btn" onclick="doInvAction('right-click')">🖱️ Sağ Tıkla</button>
+          <button class="inv-action-btn" onclick="doInvAction('drop-one')">⬆️ 1 Tane At</button>
+          <button class="inv-action-btn" onclick="doInvAction('drop-all')">⬆️⬆️ Hepsini At</button>
+        </div>
+      `;
+    }
+
+    function doInvAction(action) {
+      if (state.selectedInvSlot === null || !state.currentInventoryBotId) return;
+      if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+        socket.emit('inventory-action', { botId: state.currentInventoryBotId, action, slot: state.selectedInvSlot });
+      } else {
+        showToast('success', 'Eylem: ' + action + ' slot #' + state.selectedInvSlot + ' (Çevrimdışı)');
+      }
+    }
+
+    els.modalInvClose.addEventListener('click', () => {
+      els.modalInventory.classList.remove('active');
+      state.currentInventoryBotId = null;
+    });
+
+    els.modalInventory.addEventListener('click', (e) => {
+      if (e.target === els.modalInventory) {
+        els.modalInventory.classList.remove('active');
+        state.currentInventoryBotId = null;
+      }
+    });
+
+    document.getElementById('btn-inv-refresh').addEventListener('click', () => {
+      if (!state.currentInventoryBotId) return;
+      if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+        socket.emit('get-inventory', state.currentInventoryBotId);
+      }
+    });
+
+    // ── Script Panel ─────────────────────────────────────────
+    const scriptPresets = {
+      'chat-loop': `// Her 5 saniyede rastgele mesaj at
+const messages = ['Merhaba!', 'Selam', 'Naber?', 'AFK', ':)'];
+setInterval(() => {
+  const msg = messages[Math.floor(Math.random() * messages.length)];
+  bot.chat(msg);
+  console.log('Gönderildi:', msg);
+}, 5000);`,
+      'auto-chat': `// Belirli aralıklarla mesaj at
+let count = 0;
+const interval = setInterval(() => {
+  count++;
+  bot.chat('Mesaj #' + count);
+  console.log('Mesaj #' + count + ' gönderildi');
+}, 3000);
+
+// 10 mesaj sonra dur
+setTimeout(() => {
+  clearInterval(interval);
+  console.log('Oto chat durduruldu');
+}, 35000);`,
+      'look-around': `// Etrafına rastgele bak
+function lookRandom() {
+  const yaw = Math.random() * Math.PI * 2;
+  const pitch = (Math.random() - 0.5) * Math.PI / 2;
+  bot.look(yaw, pitch, true);
+  console.log('Bakış yönü değiştirildi');
+}
+
+setInterval(lookRandom, 2000);
+lookRandom();`,
+      'spam-click': `// Sürekli sağ tık (el sallama)
+setInterval(() => {
+  bot.swingArm('right');
+  console.log('El sallandı');
+}, 500);`,
+      'follow-player': `// En yakın oyuncuyu Pathfinder ile hatasız ve akıcı takip et
+const { goals, Movements } = require('mineflayer-pathfinder');
+
+// Pathfinder harita hareket tanımlarını kontrol et
+if (bot.pathfinder && !bot.pathfinder.movements) {
+  try {
+    const mcData = require('minecraft-data')(bot.version || '1.20.1');
+    if (mcData) {
+      const defaultMove = new Movements(bot, mcData);
+      defaultMove.canDig = true;
+      bot.pathfinder.setMovements(defaultMove);
+    }
+  } catch (e) {}
+}
+
+function followNearestPlayer() {
+  if (!bot.pathfinder || !bot.entity) return;
+
+  let targetEntity = null;
+  let minDist = Infinity;
+
+  // Görüş alanındaki oyuncuları bot.entities içinden ara
+  for (const id in bot.entities) {
+    const entity = bot.entities[id];
+    if (entity && entity.type === 'player' && entity !== bot.entity) {
+      const dist = bot.entity.position.distanceTo(entity.position);
+      if (dist < minDist) {
+        minDist = dist;
+        targetEntity = entity;
+      }
+    }
+  }
+
+  if (targetEntity && targetEntity.username) {
+    try {
+      const goal = new goals.GoalFollow(targetEntity, 2);
+      bot.pathfinder.setGoal(goal, true);
+      console.log('🏃 Takip ediliyor:', targetEntity.username, '(' + Math.round(minDist) + 'm)');
+    } catch (err) {
+      console.error('Takip hatası:', err.message);
+    }
+  } else {
+    console.log('⚠️ Görüş alanında takip edilecek oyuncu bulunamadı.');
+  }
+}
+
+followNearestPlayer();
+setInterval(followNearestPlayer, 4000);`,
+      'auto-eat': `// Açlık 15'in altına düşerse yemek ye
+function checkFood() {
+  if (bot.food < 15) {
+    console.log('Açlık düşük! Yemek yiyorum...');
+    bot.chat('/feed');
+  }
+}
+
+setInterval(checkFood, 5000);
+console.log('Oto yemek aktif');`
+    };
+
+    function openScriptModal(botId, botName) {
+      state.currentScriptBotId = botId;
+      document.getElementById('script-modal-title').textContent = botName + ' - Script Panel';
+      els.modalScript.classList.add('active');
+      document.getElementById('script-editor').focus();
+    }
+
+    els.modalScriptClose.addEventListener('click', () => {
+      els.modalScript.classList.remove('active');
+      state.currentScriptBotId = null;
+    });
+
+    els.modalScript.addEventListener('click', (e) => {
+      if (e.target === els.modalScript) {
+        els.modalScript.classList.remove('active');
+        state.currentScriptBotId = null;
+      }
+    });
+
+    document.getElementById('script-presets').addEventListener('click', (e) => {
+      if (e.target.classList.contains('script-preset')) {
+        const preset = e.target.dataset.preset;
+        const editor = document.getElementById('script-editor');
+        editor.value = scriptPresets[preset] || '';
+      }
+    });
+
+    document.getElementById('btn-run-script').addEventListener('click', () => {
+      if (!state.currentScriptBotId) return;
+      const script = document.getElementById('script-editor').value.trim();
+      if (!script) {
+        showToast('error', 'Script boş olamaz.');
+        return;
+      }
+      if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+        socket.emit('run-bot-script', { botId: state.currentScriptBotId, script });
+      } else {
+        // Çevrimdışı mod - scripti konsolda göster
+        const bot = state.bots.get(state.currentScriptBotId);
+        if (bot) {
+          const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          addConsoleMessage(state.currentScriptBotId, 'system', 'Script çalıştırıldı (Çevrimdışı mod - sadece demo):', now);
+          addConsoleMessage(state.currentScriptBotId, 'info', script.substring(0, 200) + (script.length > 200 ? '...' : ''), now);
+          showToast('success', 'Script çalıştırıldı (Çevrimdışı mod - demo)');
+        }
+      }
+      showToast('success', 'Script çalıştırılıyor...');
+    });
+
+    document.getElementById('btn-clear-script').addEventListener('click', () => {
+      document.getElementById('script-editor').value = '';
+    });
+
+    document.getElementById('btn-stop-script').addEventListener('click', () => {
+      if (!state.currentScriptBotId) return;
+      if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+        socket.emit('stop-bot-script', state.currentScriptBotId);
+      }
+      showToast('success', 'Script durduruldu.');
+    });
+
+    // ── Modal: Bot Ekle ────────────────────────────────────────
+    function openAddBotModal(server) {
+      document.getElementById('modal-title').textContent = 'Bot Ekle';
+      els.modalServerIp.value = server.serverIp;
+      els.modalServerIp.readOnly = true;
+      els.modalServerPort.value = server.serverPort;
+      els.modalServerPort.readOnly = true;
+      els.modalBotVersion.value = server.version;
+      els.modalProxy.value = server.hasProxy ? (server.proxy || '') : '';
+      els.modalBotNames.value = '';
+      if (els.modalJoinMessage) els.modalJoinMessage.value = '';
+      if (els.modalJoinDelay) els.modalJoinDelay.value = '3';
+      els.modalAddBot.classList.add('active');
+    }
+
+    function openAddServerModal() {
+      document.getElementById('modal-title').textContent = 'Yeni Sunucu Ekle';
+      els.modalServerIp.value = '';
+      els.modalServerIp.readOnly = false;
+      els.modalServerPort.value = '25565';
+      els.modalServerPort.readOnly = false;
+      els.modalBotVersion.value = '1.20.1';
+      els.modalProxy.value = '';
+      els.modalBotNames.value = '';
+      if (els.modalJoinMessage) els.modalJoinMessage.value = '';
+      if (els.modalJoinDelay) els.modalJoinDelay.value = '3';
+      els.modalAddBot.classList.add('active');
+      setTimeout(() => els.modalServerIp.focus(), 100);
+    }
+
+    document.getElementById('btn-new-server').addEventListener('click', openAddServerModal);
+    document.getElementById('btn-new-server-empty').addEventListener('click', openAddServerModal);
+
+    els.btnPanelAddBot.addEventListener('click', () => {
+      const server = state.servers.get(state.currentServerKey);
+      if (server) openAddBotModal(server);
+    });
+
+    els.modalAddClose.addEventListener('click', () => {
+      els.modalAddBot.classList.remove('active');
+    });
+
+    els.modalAddBot.addEventListener('click', (e) => {
+      if (e.target === els.modalAddBot) els.modalAddBot.classList.remove('active');
+    });
+
+    els.btnModalAdd.addEventListener('click', () => {
+      const ip = els.modalServerIp.value.trim();
+      const port = els.modalServerPort.value.trim();
+      const version = els.modalBotVersion.value;
+      const proxy = els.modalProxy.value.trim();
+      const namesText = els.modalBotNames.value.trim();
+      const joinMessage = els.modalJoinMessage ? els.modalJoinMessage.value.trim() : '';
+      const joinMessageDelay = els.modalJoinDelay ? (parseFloat(els.modalJoinDelay.value) || 3) : 3;
+
+      if (!ip) {
+        showToast('error', 'Sunucu IP girin.');
+        return;
+      }
+
+      if (!namesText) {
+        showToast('error', 'En az bir bot adı girin.');
+        return;
+      }
+
+      const botNames = namesText.split(/\r?\n/).map(n => n.trim()).filter(n => n);
+
+      if (botNames.length === 0) {
+        showToast('error', 'Geçerli bot adı bulunamadı.');
+        return;
+      }
+
+      if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+        socket.emit('add-bots-batch', { serverIp: ip, port, version, proxy, botNames, joinMessage, joinMessageDelay });
+        showToast('success', botNames.length + ' bot ekleniyor...');
+      } else {
+        // Çevrimdışı mod - botları yerel olarak ekle (demo)
+        addBotsOffline(ip, port, version, proxy, botNames);
+        showToast('success', botNames.length + ' bot eklendi (Çevrimdışı mod)');
+      }
+      els.modalAddBot.classList.remove('active');
+    });
+
+    // ── Modal: Oto Giriş Mesaj Ayarları ──────────────────────
+    function openJoinSettingsModal(bot) {
+      const currentBot = state.bots.get(bot.id) || bot;
+      state.currentJoinBotId = currentBot.id;
+      state.currentJoinServerKey = currentBot.serverKey;
+      document.getElementById('join-modal-title').textContent = `${currentBot.name} — Oto Giriş Mesajı`;
+      document.getElementById('edit-join-message').value = currentBot.joinMessage || '';
+      document.getElementById('edit-join-delay').value = typeof currentBot.joinMessageDelay !== 'undefined' ? currentBot.joinMessageDelay : 3;
+      document.getElementById('edit-join-apply-all').checked = false;
+      els.modalJoinSettings.classList.add('active');
+    }
+
+    els.modalJoinClose.addEventListener('click', () => {
+      els.modalJoinSettings.classList.remove('active');
+    });
+
+    els.modalJoinSettings.addEventListener('click', (e) => {
+      if (e.target === els.modalJoinSettings) els.modalJoinSettings.classList.remove('active');
+    });
+
+    els.btnSaveJoinSettings.addEventListener('click', () => {
+      const msg = document.getElementById('edit-join-message').value;
+      const delay = parseFloat(document.getElementById('edit-join-delay').value) || 3;
+      const applyToAll = document.getElementById('edit-join-apply-all').checked;
+
+      if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+        socket.emit('update-join-config', {
+          botId: state.currentJoinBotId,
+          serverKey: state.currentJoinServerKey,
+          joinMessage: msg,
+          joinMessageDelay: delay,
+          applyToAll: applyToAll
+        });
+      } else {
+        const bot = state.bots.get(state.currentJoinBotId);
+        if (bot) {
+          bot.joinMessage = msg;
+          bot.joinMessageDelay = delay;
+          showToast('success', 'Giriş mesaj ayarları kaydedildi (Çevrimdışı mod)');
+        }
+      }
+      els.modalJoinSettings.classList.remove('active');
+    });
+
+    // ── Modal: Toplu Mesaj ───────────────────────────────────
+    els.btnPanelBroadcast.addEventListener('click', () => {
+      els.modalBroadcast.classList.add('active');
+      els.broadcastMessage.value = '';
+      els.broadcastMessage.focus();
+    });
+
+    els.modalBroadcastClose.addEventListener('click', () => {
+      els.modalBroadcast.classList.remove('active');
+    });
+
+    els.modalBroadcast.addEventListener('click', (e) => {
+      if (e.target === els.modalBroadcast) els.modalBroadcast.classList.remove('active');
+    });
+
+    els.btnBroadcastSend.addEventListener('click', () => {
+      const msg = els.broadcastMessage.value.trim();
+      if (!msg) return;
+
+      if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+        socket.emit('broadcast-message', { serverKey: state.currentServerKey, message: msg });
+      } else {
+        // Çevrimdışı mod - tüm botlara yerel mesaj
+        const server = state.servers.get(state.currentServerKey);
+        if (server) {
+          const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          (server.bots || []).forEach(b => {
+            addConsoleMessage(b.id, 'self', `[Toplu] ${msg}`, now);
+            saveMessageToStorage(b.id, 'self', `[Toplu] ${msg}`, now);
+          });
+          showToast('success', 'Toplu mesaj gönderildi (Çevrimdışı mod)');
+        }
+      }
+      els.modalBroadcast.classList.remove('active');
+    });
+
+    els.broadcastMessage.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') els.btnBroadcastSend.click();
+    });
+
+    // ── Panel: Tüm Anti-AFK ──────────────────────────────────
+    els.btnPanelAntiAfk.addEventListener('click', () => {
+      state.antiAfkAllState = !state.antiAfkAllState;
+      els.btnPanelAntiAfk.classList.toggle('active', state.antiAfkAllState);
+      if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+        socket.emit('toggle-all-antiafk', { 
+          serverKey: state.currentServerKey, 
+          enabled: state.antiAfkAllState 
+        });
+      } else {
+        // Çevrimdışı mod
+        const server = state.servers.get(state.currentServerKey);
+        if (server) {
+          const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          (server.bots || []).forEach(b => {
+            b.antiAfkEnabled = state.antiAfkAllState;
+            updateAntiAfkButton(b.id, state.antiAfkAllState);
+            addConsoleMessage(b.id, 'system', `Anti-AFK ${state.antiAfkAllState ? 'aktif' : 'devre dışı'} (Toplu - Çevrimdışı)`, now);
+          });
+          showToast('success', `Tüm botlarda Anti-AFK ${state.antiAfkAllState ? 'aktif' : 'devre dışı'} (Çevrimdışı mod)`);
+        }
+      }
+    });
+
+    // ── Panel: Tümünü Çıkar ────────────────────────────────────
+    els.btnPanelRemoveAll.addEventListener('click', () => {
+      const server = state.servers.get(state.currentServerKey);
+      if (!server) return;
+
+      if (confirm('"' + server.serverIp + '" sunucusundaki TÜM botları çıkarmak istiyor musun?')) {
+        if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+          socket.emit('remove-server-bots', state.currentServerKey);
+        } else {
+          // Çevrimdışı mod
+          const server = state.servers.get(state.currentServerKey);
+          if (server) {
+            (server.bots || []).forEach(b => {
+              state.bots.delete(b.id);
+              state.consoles.delete(b.id);
+              clearStorageForBot(b.id);
+            });
+            updateServersFromBots();
+            renderServerBrowser();
+            showToast('success', 'Tüm botlar çıkarıldı (Çevrimdışı mod)');
+          }
+        }
+        showPage('browser');
+      }
+    });
+
+    // ── Modal: Oyuncu Listesi ──────────────────────────────────
+    function showPlayerList(players) {
+      if (!players || players.length === 0) {
+        els.playerList.innerHTML = '<li class="player-item">Çevrimiçi oyuncu yok.</li>';
+        return;
+      }
+
+      els.playerList.innerHTML = players.map(p => {
+        let pingClass = 'good';
+        if (p.ping > 100) pingClass = 'medium';
+        if (p.ping > 300) pingClass = 'bad';
+
+        return '<li class="player-item" style="display:flex;align-items:center;justify-content:space-between;">' +
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span style="font-size:1.1rem">👤</span>' +
+          '<span style="font-weight:600">' + escapeHtml(p.username) + '</span>' +
+          '<span class="ping ' + pingClass + '">' + p.ping + 'ms</span>' +
+          '</div>' +
+          '<button class="btn-script" style="padding:4px 10px;font-size:0.75rem;border-radius:var(--radius-sm);" data-follow-player="' + escapeHtml(p.username) + '">🏃 Takip Et</button>' +
+          '</li>';
+      }).join('');
+    }
+
+    els.playerList.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-follow-player]');
+      if (btn && state.currentPlayerListBot) {
+        const targetUser = btn.dataset.followPlayer;
+        if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+          socket.emit('follow-player', { botId: state.currentPlayerListBot, targetUsername: targetUser });
+        }
+        showToast('info', targetUser + ' takip ediliyor...');
+        els.modalPlayers.classList.remove('active');
+      }
+    });
+
+    els.modalPlayersClose.addEventListener('click', () => {
+      els.modalPlayers.classList.remove('active');
+      state.currentPlayerListBot = null;
+    });
+
+    els.modalPlayers.addEventListener('click', (e) => {
+      if (e.target === els.modalPlayers) {
+        els.modalPlayers.classList.remove('active');
+        state.currentPlayerListBot = null;
+      }
+    });
+
+    // ── Toast ──────────────────────────────────────────────────
+    function showToast(type, text) {
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.textContent = text;
+      els.toastContainer.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%) scale(0.9)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4500);
+    }
+
+    // ── Yardımcı ───────────────────────────────────────────────
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ── Başlangıç ──────────────────────────────────────────────
+    renderServerBrowser();
+  </script>
+
+</body>
+</html>

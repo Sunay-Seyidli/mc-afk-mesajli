@@ -1,11 +1,20 @@
-<div align="center">
+---
+title: Minecraft AFK Client
+emoji: 🤖
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+# Minecraft AFK Client v3
 
-  <h1>Built with AI Studio</h2>
+Minecraft AFK Bot manager website using Mineflayer, Express, and Socket.io.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
-
-  <a href="https://aistudio.google.com/apps">Start building</a>
-
-</div>
+## Features
+- Bot coordinates, health, and foods status tracking
+- Fully functional in-app custom controls & script engine
+- AI model integrations
+- Server Browser info and statistics
+- Proxy support

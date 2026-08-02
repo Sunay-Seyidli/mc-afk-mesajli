@@ -1,0 +1,28 @@
+{
+  "name": "minecraft-afk-client-v3",
+  "version": "3.0.0",
+  "description": "Minecraft AFK Client v3 - Bot Kontrol, Script, Hareket",
+  "main": "server.ts",
+  "scripts": {
+    "start": "node server.ts",
+    "dev": "node server.ts",
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "@google/genai": "^2.8.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mineflayer": "^4.14.0",
+    "mineflayer-armor-manager": "^2.0.1",
+    "mineflayer-auto-eat": "^5.0.3",
+    "mineflayer-pathfinder": "^2.4.5",
+    "socket.io": "^4.7.4",
+    "socks": "^2.7.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

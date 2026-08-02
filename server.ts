@@ -477,7 +477,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
 });
 
 // Graceful shutdown and global protocol error handling
-const isProtocolError = (err: any) => {
+const isProtocolError = (err) => {
   if (!err) return false;
   const errStr = String(err.stack || err.message || err);
   const errName = String(err.name || err.constructor?.name || '');
@@ -491,7 +491,7 @@ const isProtocolError = (err: any) => {
   );
 };
 
-process.on('uncaughtException', (err: any) => {
+process.on('uncaughtException', (err) => {
   const msg = err?.message || String(err) || 'Uncaught Error';
   if (isProtocolError(err)) {
     console.log(`[Protocol Warning] Paket ayrıştırma uyarısı: ${msg}`);
@@ -514,7 +514,7 @@ process.on('uncaughtException', (err: any) => {
   console.log(`[Uncaught Exception Handled]: ${msg}`);
 });
 
-process.on('unhandledRejection', (reason: any) => {
+process.on('unhandledRejection', (reason) => {
   const msg = reason?.message || String(reason) || 'Unhandled Rejection';
   if (isProtocolError(reason)) {
     console.log(`[Protocol Promise Warning]: ${msg}`);

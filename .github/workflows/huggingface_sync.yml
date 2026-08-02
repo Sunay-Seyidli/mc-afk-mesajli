@@ -2,7 +2,7 @@ name: Sync to Hugging Face Spaces
 
 on:
   push:
-    branches: [ "main" ] # GitHub'da kullandığınız ana dal (branch) adı "master" ise burayı master yapın.
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -10,26 +10,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           lfs: true
 
       - name: Push to Hugging Face Hub
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }} # GitHub Repository Secrets kısmına HF_TOKEN adında Hugging Face 'Write' türü token eklemelisiniz (Hugging Face Profile > Settings > Access Tokens > New Token > Write).
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git config --global user.email "github-actions@github.com"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "GitHub Actions"
-          # Space URL: https://qwatro-afk-mc.hf.space/ -> Space ID: qwatro/afk-mc
-          git remote add space https://qwatro:$HF_TOKEN@huggingface.co/spaces/qwatro/afk-mc
+          git remote add space https://Sunay-Seyidli:$HF_TOKEN@huggingface.co/spaces/Sunay-Seyidli/mc-afk-mesajli
           
-          # Fetch the remote Space main branch to reconcile histories
+          # Fetch remote space history
           git fetch space main || true
+          git fetch space master || true
           
-          # Merge the remote history with ours, resolving conflicts using our version (-X ours)
-          # This incorporates Hugging Face's internal commits (e.g., Space configuration metadata)
+          # Merge remote space metadata if exists
           git merge space/main -m "Merge Hugging Face Space Metadata" --allow-unrelated-histories -X ours || true
           
-          # Push head back as a clean fast-forward update, avoiding force push "incorrect old value" rejection
-          git push space HEAD:main
+          # Push to Hugging Face Space
+          git push space HEAD:main --force
+

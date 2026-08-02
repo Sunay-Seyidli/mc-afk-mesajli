@@ -1,8 +1,13 @@
 {
-  "name": "minecraft-afk-client-v3",
+  "name": "mc-afk-mesajli",
   "version": "3.0.0",
-  "description": "Minecraft AFK Client v3 - Bot Kontrol, Script, Hareket",
+  "description": "Minecraft AFK Bot Yöneticisi & Mesajlı Akıllı Anti-AFK (Sunay-Seyidli/mc-afk-mesajli)",
   "main": "server.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://huggingface.co/spaces/Sunay-Seyidli/mc-afk-mesajli"
+  },
+  "homepage": "https://huggingface.co/spaces/Sunay-Seyidli/mc-afk-mesajli",
   "scripts": {
     "start": "node server.ts",
     "dev": "node server.ts",

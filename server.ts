@@ -157,12 +157,14 @@ io.on('connection', (socket) => {
 
   // Mevcut botları ve RAM kullanımını gönder
   socket.emit('ram-usage', botManager.getRamUsage());
-  socket.emit('bot-update', botManager.getAllBots());
+  socket.emit('bot-update', botManager.getAllBots(socket.accessKeyId || null));
+  socket.emit('server-bots', botManager.getBotsByServer(socket.accessKeyId || null));
 
   // ── Bot Ekle ────────────────────────────────────────────────
   socket.on('add-bot', async (data) => {
     try {
-      const result = await botManager.addBot(data);
+      const accessKeyId = data.accessKeyId || socket.accessKeyId || null;
+      const result = await botManager.addBot({ ...data, accessKeyId });
       if (!result.success) {
         socket.emit('system-message', { type: 'error', text: result.message });
         return;
@@ -177,7 +179,8 @@ io.on('connection', (socket) => {
   // ── Toplu Bot Ekle (Server Browser'dan) ───────────────────
   socket.on('add-bots-batch', async (data) => {
     try {
-      const { serverIp, port, version, proxy, botNames, joinMessage, joinMessageDelay, accessKeyId } = data;
+      const { serverIp, port, version, proxy, botNames, joinMessage, joinMessageDelay } = data;
+      const accessKeyId = data.accessKeyId || socket.accessKeyId || null;
       const results = [];
 
       for (const botName of botNames) {
@@ -219,7 +222,7 @@ io.on('connection', (socket) => {
   // ── Oto Giriş Mesaj Ayarları Güncelle ──────────────────────
   socket.on('update-join-config', ({ botId, serverKey, joinMessage, joinMessageDelay, applyToAll }) => {
     try {
-      const result = botManager.updateJoinConfig({ botId, serverKey, joinMessage, joinMessageDelay, applyToAll });
+      const result = botManager.updateJoinConfig({ botId, serverKey, joinMessage, joinMessageDelay, applyToAll, accessKeyId: socket.accessKeyId || null });
       socket.emit('system-message', {
         type: result.success ? 'success' : 'error',
         text: result.message
@@ -233,6 +236,13 @@ io.on('connection', (socket) => {
   // ── Bot Çıkar ───────────────────────────────────────────────
   socket.on('remove-bot', (botId) => {
     try {
+      if (socket.accessKeyId) {
+        const bot = botManager.bots.get(botId);
+        if (bot && bot.accessKeyId !== socket.accessKeyId) {
+          socket.emit('system-message', { type: 'error', text: 'Bu bot üzerinde işlem yapma yetkiniz yok.' });
+          return;
+        }
+      }
       const result = botManager.removeBot(botId);
       socket.emit('system-message', { 
         type: result.success ? 'success' : 'error', 
@@ -247,7 +257,7 @@ io.on('connection', (socket) => {
   // ── Sunucudaki Tüm Botları Çıkar ────────────────────────────
   socket.on('remove-server-bots', (serverKey) => {
     try {
-      const result = botManager.removeServerBots(serverKey);
+      const result = botManager.removeServerBots(serverKey, socket.accessKeyId || null);
       socket.emit('system-message', { 
         type: result.success ? 'success' : 'error', 
         text: result.message 
@@ -344,7 +354,7 @@ io.on('connection', (socket) => {
   // ── Tüm Botlarda Anti-AFK Toggle ──────────────────────────
   socket.on('toggle-all-antiafk', ({ serverKey, enabled }) => {
     try {
-      const result = botManager.toggleAllAntiAfk(serverKey, enabled);
+      const result = botManager.toggleAllAntiAfk(serverKey, enabled, socket.accessKeyId || null);
       socket.emit('system-message', { 
         type: result.success ? 'success' : 'error', 
         text: result.message 
@@ -358,7 +368,7 @@ io.on('connection', (socket) => {
   // ── Tüm Botlara Mesaj Gönder ──────────────────────────────
   socket.on('broadcast-message', ({ serverKey, message }) => {
     try {
-      const result = botManager.broadcastMessage(serverKey, message);
+      const result = botManager.broadcastMessage(serverKey, message, socket.accessKeyId || null);
       socket.emit('system-message', { 
         type: result.success ? 'success' : 'error', 
         text: result.message 
@@ -591,6 +601,10 @@ io.on('connection', (socket) => {
       if (typeof callback === 'function') callback({ success: false, active: false, message: 'Bu erişim bağlantısı pasif duruma getirilmiştir.' });
       return;
     }
+    socket.accessKeyId = keyId;
+    socket.emit('bot-update', botManager.getAllBots(keyId));
+    socket.emit('server-bots', botManager.getBotsByServer(keyId));
+
     let currentBotsCount = 0;
     for (const [_, b] of botManager.bots) {
       if (b.accessKeyId === keyId) currentBotsCount++;
@@ -618,8 +632,11 @@ setInterval(() => {
 
 // Bot durumlarını periyodik güncelle (koordinat, can, açlık)
 setInterval(() => {
-  const botData = botManager.getAllBotsWithStats();
-  io.emit('bot-stats-update', botData);
+  for (const [_, socket] of io.sockets.sockets) {
+    const accessKeyId = socket.accessKeyId || null;
+    const botData = botManager.getAllBotsWithStats(accessKeyId);
+    socket.emit('bot-stats-update', botData);
+  }
 }, 500);
 
 // ── Sunucuyu Başlat ─────────────────────────────────────────────

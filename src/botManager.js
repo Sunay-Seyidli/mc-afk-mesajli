@@ -205,9 +205,12 @@ class BotManager {
 
   // ── Bot Verisi Dönüştürücü (Arayüz için) ──────────────────
 
-  getAllBots() {
+  getAllBots(accessKeyId = null) {
     const bots = [];
     for (const [id, data] of this.bots) {
+      if (accessKeyId && data.accessKeyId !== accessKeyId) {
+        continue;
+      }
       bots.push({
         id,
         name: data.name,
@@ -217,6 +220,7 @@ class BotManager {
         serverKey: data.serverKey,
         version: data.version,
         hasProxy: data.hasProxy,
+        accessKeyId: data.accessKeyId || null,
         antiAfkEnabled: data.antiAfk ? data.antiAfk.isRunning : (data.antiAfkActivePreference || false),
         autoReconnectEnabled: data.autoReconnectEnabled !== false,
         playerCount: data.players ? data.players.length : 0
@@ -228,9 +232,12 @@ class BotManager {
   /**
    * Bot istatistiklerini döndürür (koordinat, can, açlık, XP)
    */
-  getAllBotsWithStats() {
+  getAllBotsWithStats(accessKeyId = null) {
     const bots = [];
     for (const [id, data] of this.bots) {
+      if (accessKeyId && data.accessKeyId !== accessKeyId) {
+        continue;
+      }
       const stats = this._getBotStats(data);
       bots.push({
         id,
@@ -241,6 +248,7 @@ class BotManager {
         serverKey: data.serverKey,
         version: data.version,
         hasProxy: data.hasProxy,
+        accessKeyId: data.accessKeyId || null,
         antiAfkEnabled: data.antiAfk ? data.antiAfk.isRunning : (data.antiAfkActivePreference || false),
         autoReconnectEnabled: data.autoReconnectEnabled !== false,
         playerCount: data.players ? data.players.length : 0,
@@ -313,10 +321,13 @@ class BotManager {
   /**
    * Sunucu bazlı gruplanmış botları döndürür
    */
-  getBotsByServer() {
+  getBotsByServer(accessKeyId = null) {
     const servers = new Map();
 
     for (const [id, data] of this.bots) {
+      if (accessKeyId && data.accessKeyId !== accessKeyId) {
+        continue;
+      }
       const key = data.serverKey;
       if (!servers.has(key)) {
         servers.set(key, {
@@ -333,6 +344,7 @@ class BotManager {
         id,
         name: data.name,
         status: data.status,
+        accessKeyId: data.accessKeyId || null,
         antiAfkEnabled: data.antiAfk ? data.antiAfk.isRunning : false,
         playerCount: data.players ? data.players.length : 0
       });
@@ -435,11 +447,11 @@ class BotManager {
     }
   }
 
-  updateJoinConfig({ botId, serverKey, joinMessage, joinMessageDelay, applyToAll }) {
+  updateJoinConfig({ botId, serverKey, joinMessage, joinMessageDelay, applyToAll, accessKeyId = null }) {
     if (applyToAll && serverKey) {
       let count = 0;
       for (const [id, data] of this.bots) {
-        if (data.serverKey === serverKey) {
+        if (data.serverKey === serverKey && (!accessKeyId || data.accessKeyId === accessKeyId)) {
           if (joinMessage !== undefined) data.joinMessage = joinMessage;
           if (joinMessageDelay !== undefined) data.joinMessageDelay = Number(joinMessageDelay);
           count++;
@@ -450,6 +462,9 @@ class BotManager {
     } else if (botId) {
       const data = this.bots.get(botId);
       if (!data) return { success: false, message: 'Bot bulunamadı.' };
+      if (accessKeyId && data.accessKeyId !== accessKeyId) {
+        return { success: false, message: 'Bu bot üzerinde işlem yapma yetkiniz yok.' };
+      }
       if (joinMessage !== undefined) data.joinMessage = joinMessage;
       if (joinMessageDelay !== undefined) data.joinMessageDelay = Number(joinMessageDelay);
       this.emitBotUpdate();
@@ -733,11 +748,11 @@ class BotManager {
           botData.inventoryListenerBound = true;
           bot.inventory.on('windowUpdate', () => {
             const inv = this.getInventory(botData.id);
-            this.io.emit('inventory-data', { botId: botData.id, ...inv });
+            this.emitToBotScope(botData.id, 'inventory-data', { botId: botData.id, ...inv });
           });
           // Send initial inventory on spawn
           const inv = this.getInventory(botData.id);
-          this.io.emit('inventory-data', { botId: botData.id, ...inv });
+          this.emitToBotScope(botData.id, 'inventory-data', { botId: botData.id, ...inv });
         }
       });
 
@@ -866,12 +881,12 @@ class BotManager {
   /**
    * Sunucudaki tüm botlara mesaj gönder
    */
-  broadcastMessage(serverKey, message) {
+  broadcastMessage(serverKey, message, accessKeyId = null) {
     let sent = 0;
     let failed = 0;
 
     for (const [id, botData] of this.bots) {
-      if (botData.serverKey === serverKey && botData.status === 'online') {
+      if (botData.serverKey === serverKey && botData.status === 'online' && (!accessKeyId || botData.accessKeyId === accessKeyId)) {
         try {
           botData.instance.chat(message);
           this.emitChatMessage(id, 'self', `→ ${message}`);
@@ -1512,11 +1527,11 @@ class BotManager {
   /**
    * Sunucudaki tüm botlarda Anti-AFK toggle
    */
-  toggleAllAntiAfk(serverKey, enabled) {
+  toggleAllAntiAfk(serverKey, enabled, accessKeyId = null) {
     let toggled = 0;
 
     for (const [id, botData] of this.bots) {
-      if (botData.serverKey === serverKey && botData.status === 'online' && botData.antiAfk) {
+      if (botData.serverKey === serverKey && botData.status === 'online' && botData.antiAfk && (!accessKeyId || botData.accessKeyId === accessKeyId)) {
         if (enabled) {
           botData.antiAfk.start();
           this.emitChatMessage(id, 'system', '🛡️ Anti-AFK aktifleştirildi.');
@@ -1552,12 +1567,12 @@ class BotManager {
   /**
    * Sunucudaki tüm botları çıkar
    */
-  removeServerBots(serverKey) {
+  removeServerBots(serverKey, accessKeyId = null) {
     let removed = 0;
     const toRemove = [];
 
     for (const [id, botData] of this.bots) {
-      if (botData.serverKey === serverKey) {
+      if (botData.serverKey === serverKey && (!accessKeyId || botData.accessKeyId === accessKeyId)) {
         toRemove.push(id);
       }
     }
@@ -1666,7 +1681,7 @@ class BotManager {
           const currentBlock = bot.blockAt(targetPos);
           if (currentBlock && currentBlock.name === blockName) {
             botData.builderPlaced++;
-            this.io.emit('builder-progress', {
+            this.emitToBotScope(botId, 'builder-progress', {
               botId,
               total: botData.builderTotal,
               placed: botData.builderPlaced,
@@ -1688,7 +1703,7 @@ class BotManager {
         const item = bot.inventory.items().find(it => it.name === blockName);
         if (!item) {
           botData.builderActive = false;
-          this.io.emit('builder-progress', {
+          this.emitToBotScope(botId, 'builder-progress', {
             botId,
             total: botData.builderTotal,
             placed: botData.builderPlaced,
@@ -1813,7 +1828,7 @@ class BotManager {
 
         if (placed) {
           botData.builderPlaced++;
-          this.io.emit('builder-progress', {
+          this.emitToBotScope(botId, 'builder-progress', {
             botId,
             total: botData.builderTotal,
             placed: botData.builderPlaced,
@@ -1831,7 +1846,7 @@ class BotManager {
       // Done building or loop interrupted
       if (botData.builderActive) {
         botData.builderActive = false;
-        this.io.emit('builder-progress', {
+        this.emitToBotScope(botId, 'builder-progress', {
           botId,
           total: botData.builderTotal,
           placed: botData.builderPlaced,
@@ -1854,7 +1869,7 @@ class BotManager {
     }
 
     botData.builderActive = false;
-    this.io.emit('builder-progress', {
+    this.emitToBotScope(botId, 'builder-progress', {
       botId,
       total: botData.builderTotal,
       placed: botData.builderPlaced,
@@ -1951,16 +1966,30 @@ class BotManager {
 
   // ── Socket.io Yayınları ─────────────────────────────────────
 
+  emitToBotScope(botId, eventName, data) {
+    if (!this.io) return;
+    const botData = this.bots.get(botId);
+    const botAccessKeyId = botData ? botData.accessKeyId : null;
 
+    for (const [_, socket] of this.io.sockets.sockets) {
+      if (!socket.accessKeyId || socket.accessKeyId === botAccessKeyId) {
+        socket.emit(eventName, data);
+      }
+    }
+  }
 
   emitBotUpdate() {
-    this.io.emit('bot-update', this.getAllBots());
-    this.io.emit('server-bots', this.getBotsByServer());
+    if (!this.io) return;
+    for (const [_, socket] of this.io.sockets.sockets) {
+      const accessKeyId = socket.accessKeyId || null;
+      socket.emit('bot-update', this.getAllBots(accessKeyId));
+      socket.emit('server-bots', this.getBotsByServer(accessKeyId));
+    }
   }
 
   emitChatMessage(botId, type, text, json = null) {
     const timestamp = new Date().toLocaleTimeString('tr-TR');
-    this.io.emit('chat-message', { botId, type, text, timestamp, json });
+    this.emitToBotScope(botId, 'chat-message', { botId, type, text, timestamp, json });
   }
 }
 

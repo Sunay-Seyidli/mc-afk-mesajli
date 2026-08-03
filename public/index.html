@@ -2782,6 +2782,9 @@
       });
 
       socket.on('bot-update', (bots) => {
+        if (state.isCustomerView && state.accessKeyId) {
+          bots = (bots || []).filter(b => b.accessKeyId === state.accessKeyId);
+        }
         console.log('[Socket] bot-update:', bots.length, 'bots');
         const currentIds = new Set(state.bots.keys());
         const newIds = new Set(bots.map(b => b.id));
@@ -2823,6 +2826,9 @@
       });
 
       socket.on('bot-stats-update', (bots) => {
+        if (state.isCustomerView && state.accessKeyId) {
+          bots = (bots || []).filter(b => b.accessKeyId === state.accessKeyId);
+        }
         for (const bot of bots) {
           state.bots.set(bot.id, { ...state.bots.get(bot.id), ...bot });
           updateBotStats(bot);
@@ -2831,6 +2837,10 @@
       });
 
       socket.on('chat-message', ({ botId, type, text, timestamp, json }) => {
+        if (state.isCustomerView && state.accessKeyId) {
+          const b = state.bots.get(botId);
+          if (b && b.accessKeyId && b.accessKeyId !== state.accessKeyId) return;
+        }
         addConsoleMessage(botId, type, text, timestamp, json);
         saveMessageToStorage(botId, type, text, timestamp, json);
       });

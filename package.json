@@ -1,13 +1,8 @@
 {
-  "name": "mc-afk-mesajli",
+  "name": "minepulse-afk-cloud",
   "version": "3.0.0",
-  "description": "Minecraft AFK Bot Yöneticisi & Mesajlı Akıllı Anti-AFK (Sunay-Seyidli/mc-afk-mesajli)",
+  "description": "Kurumsal Minecraft AFK Bot Yöneticisi & Akıllı Otomasyon Portalı",
   "main": "server.ts",
-  "repository": {
-    "type": "git",
-    "url": "https://huggingface.co/spaces/Sunay-Seyidli/mc-afk-mesajli"
-  },
-  "homepage": "https://huggingface.co/spaces/Sunay-Seyidli/mc-afk-mesajli",
   "scripts": {
     "start": "node server.ts",
     "dev": "node server.ts",

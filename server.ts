@@ -20,6 +20,7 @@ const path = require('path');
 require('dotenv').config();
 
 const BotManager = require('./src/botManager');
+const storeManager = require('./src/store');
 
 // ── Express & HTTP Sunucu Kurulumu ──────────────────────────────
 const app = express();
@@ -129,9 +130,22 @@ app.get('/api/keep-alive', (req, res) => {
   });
 });
 
-// Ana sayfa
+// Ana sayfa & Müşteri erişim rotaları
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/access/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/:id', (req, res, next) => {
+  const { id } = req.params;
+  const key = storeManager.getAccessKey(id);
+  if (key) {
+    return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
+  next();
 });
 
 // ── Bot Yöneticisi ──────────────────────────────────────────────
@@ -163,7 +177,7 @@ io.on('connection', (socket) => {
   // ── Toplu Bot Ekle (Server Browser'dan) ───────────────────
   socket.on('add-bots-batch', async (data) => {
     try {
-      const { serverIp, port, version, proxy, botNames, joinMessage, joinMessageDelay } = data;
+      const { serverIp, port, version, proxy, botNames, joinMessage, joinMessageDelay, accessKeyId } = data;
       const results = [];
 
       for (const botName of botNames) {
@@ -174,17 +188,28 @@ io.on('connection', (socket) => {
           version,
           proxy,
           joinMessage,
-          joinMessageDelay
+          joinMessageDelay,
+          accessKeyId
         });
-        results.push(result);
+        results.push({ name: botName, ...result });
         await new Promise(r => setTimeout(r, 500));
       }
 
       const successCount = results.filter(r => r.success).length;
-      socket.emit('system-message', { 
-        type: 'success', 
-        text: `${successCount}/${botNames.length} bot eklendi.` 
-      });
+      const failures = results.filter(r => !r.success);
+
+      if (successCount === botNames.length) {
+        socket.emit('system-message', { 
+          type: 'success', 
+          text: `✅ ${successCount}/${botNames.length} bot başarıyla eklendi.` 
+        });
+      } else {
+        const failMsg = failures.map(f => `${f.name}: ${f.message || 'Hata'}`).join(' | ');
+        socket.emit('system-message', { 
+          type: failures.length === botNames.length ? 'error' : 'warning', 
+          text: `⚠️ ${successCount}/${botNames.length} bot eklendi. ${failMsg}` 
+        });
+      }
     } catch (err) {
       console.error('[Socket] add-bots-batch hatası:', err);
       socket.emit('system-message', { type: 'error', text: 'Toplu ekleme hatası.' });
@@ -448,6 +473,137 @@ io.on('connection', (socket) => {
   });
 
 
+
+  // ── Admin Giriş & Şifre Yönetimi ─────────────────────────────
+  socket.on('admin-login', ({ password }, callback) => {
+    const valid = storeManager.verifyAdminPassword(password);
+    if (typeof callback === 'function') {
+      callback({ success: valid, message: valid ? 'Giriş başarılı.' : 'Hatalı admin şifresi!' });
+    }
+  });
+
+  socket.on('admin-change-password', ({ oldPassword, newPassword }, callback) => {
+    if (!storeManager.verifyAdminPassword(oldPassword)) {
+      if (typeof callback === 'function') callback({ success: false, message: 'Mevcut şifre hatalı!' });
+      return;
+    }
+    const ok = storeManager.setAdminPassword(newPassword);
+    if (typeof callback === 'function') {
+      callback({ success: ok, message: ok ? 'Admin şifresi başarıyla güncellendi.' : 'Şifre değiştirilemedi.' });
+    }
+  });
+
+  socket.on('get-store-data', (callback) => {
+    if (typeof callback === 'function') {
+      callback({
+        proxyMappings: storeManager.getProxyMappings(),
+        accessKeys: storeManager.getAccessKeys()
+      });
+    }
+  });
+
+  // ── Bot - Proxy Eşleme Olayları ────────────────────────────────
+  socket.on('save-proxy-mapping', ({ botName, proxy }, callback) => {
+    const saved = storeManager.saveProxyMapping(botName, proxy);
+    const mappings = storeManager.getProxyMappings();
+    if (typeof callback === 'function') {
+      callback({
+        success: !!saved,
+        proxyMappings: mappings,
+        message: saved ? `"${botName}" için proxy eşlemesi kaydedildi.` : 'Eşleme kaydedilemedi.'
+      });
+    }
+    io.emit('store-updated', { proxyMappings: mappings, accessKeys: storeManager.getAccessKeys() });
+  });
+
+  socket.on('delete-proxy-mapping', ({ id }, callback) => {
+    const ok = storeManager.deleteProxyMapping(id);
+    const mappings = storeManager.getProxyMappings();
+    if (typeof callback === 'function') {
+      callback({
+        success: ok,
+        proxyMappings: mappings,
+        message: ok ? 'Proxy eşleşmesi silindi.' : 'Silinemedi.'
+      });
+    }
+    io.emit('store-updated', { proxyMappings: mappings, accessKeys: storeManager.getAccessKeys() });
+  });
+
+  // ── Müşteri Erişim Linki (Access Key) Olayları ──────────────
+  socket.on('create-access-key', ({ label, botLimit, customId }, callback) => {
+    const res = storeManager.createAccessKey({ label, botLimit, customId });
+    const keys = storeManager.getAccessKeys();
+    if (typeof callback === 'function') {
+      callback({
+        ...res,
+        accessKeys: keys
+      });
+    }
+    io.emit('store-updated', { proxyMappings: storeManager.getProxyMappings(), accessKeys: keys });
+  });
+
+  socket.on('edit-access-key', ({ id, label, botLimit, newCustomId, active }, callback) => {
+    const res = storeManager.updateAccessKey(id, { label, botLimit, newCustomId, active });
+    const keys = storeManager.getAccessKeys();
+    if (typeof callback === 'function') {
+      callback({
+        success: res.success,
+        accessKeys: keys,
+        message: res.success ? 'Müşteri bağlantı ayarları güncellendi.' : (res.message || 'Güncellenemedi.')
+      });
+    }
+    io.emit('store-updated', { proxyMappings: storeManager.getProxyMappings(), accessKeys: keys });
+  });
+
+  socket.on('toggle-access-key', ({ id, active }, callback) => {
+    const res = storeManager.updateAccessKey(id, { active });
+    const keys = storeManager.getAccessKeys();
+    if (typeof callback === 'function') {
+      callback({
+        success: res.success,
+        accessKeys: keys,
+        message: res.success ? `Bağlantı ${active ? 'aktif' : 'pasif'} yapıldı.` : (res.message || 'Hata.')
+      });
+    }
+    io.emit('store-updated', { proxyMappings: storeManager.getProxyMappings(), accessKeys: keys });
+  });
+
+  socket.on('delete-access-key', ({ id }, callback) => {
+    const ok = storeManager.deleteAccessKey(id);
+    const keys = storeManager.getAccessKeys();
+    if (typeof callback === 'function') {
+      callback({
+        success: ok,
+        accessKeys: keys,
+        message: ok ? 'Bağlantı silindi.' : 'Hata.'
+      });
+    }
+    io.emit('store-updated', { proxyMappings: storeManager.getProxyMappings(), accessKeys: keys });
+  });
+
+  socket.on('verify-access-key', ({ keyId }, callback) => {
+    const keyData = storeManager.getAccessKey(keyId);
+    if (!keyData) {
+      if (typeof callback === 'function') callback({ success: false, message: 'Bulunamayan erişim bağlantısı.' });
+      return;
+    }
+    if (!keyData.active) {
+      if (typeof callback === 'function') callback({ success: false, active: false, message: 'Bu erişim bağlantısı pasif duruma getirilmiştir.' });
+      return;
+    }
+    let currentBotsCount = 0;
+    for (const [_, b] of botManager.bots) {
+      if (b.accessKeyId === keyId) currentBotsCount++;
+    }
+    if (typeof callback === 'function') {
+      callback({
+        success: true,
+        active: true,
+        keyData,
+        currentBotsCount
+      });
+    }
+  });
 
   // ── Bağlantı Kopması ────────────────────────────────────────
   socket.on('disconnect', () => {

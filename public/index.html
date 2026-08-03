@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minecraft AFK Client v3.0</title>
+  <title>MinePulse AFK Cloud Platform</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
     :root {
@@ -45,7 +45,9 @@
     }
 
     .topbar {
-      background: var(--bg-secondary);
+      background: rgba(22, 27, 34, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
       padding: 14px 28px;
       display: flex;
@@ -54,6 +56,7 @@
       position: sticky;
       top: 0;
       z-index: 100;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
     }
 
     .logo {
@@ -63,24 +66,31 @@
     }
 
     .logo-icon {
-      width: 40px; height: 40px;
-      background: linear-gradient(135deg, #58a6ff, #238636);
-      border-radius: var(--radius-sm);
+      width: 44px; height: 44px;
+      background: radial-gradient(circle at 30% 30%, #1f6feb 0%, #0d1117 100%);
+      border: 1px solid rgba(88, 166, 255, 0.4);
+      border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
-      box-shadow: 0 2px 8px rgba(88,166,255,0.3);
+      box-shadow: 0 0 16px rgba(31, 111, 235, 0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .logo-icon:hover {
+      transform: scale(1.04);
+      box-shadow: 0 0 20px rgba(88, 166, 255, 0.5);
     }
 
     .logo h1 {
-      font-size: 1.4rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: #f0f6fc;
     }
 
     .logo span {
-      color: var(--text-muted);
+      color: var(--text-secondary);
       font-size: 0.78rem;
-      font-weight: 400;
+      font-weight: 500;
     }
 
     .stats {
@@ -93,11 +103,16 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      background: var(--bg-tertiary);
-      padding: 10px 18px;
+      background: rgba(33, 38, 45, 0.7);
+      padding: 8px 16px;
       border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      font-size: 0.88rem;
+      border: 1px solid rgba(48, 54, 61, 0.8);
+      font-size: 0.85rem;
+      transition: border-color 0.2s ease;
+    }
+
+    .stat-item:hover {
+      border-color: var(--accent);
     }
 
     .stat-item .icon { font-size: 1.1rem; }
@@ -1272,6 +1287,108 @@
       font-size: 0.9rem;
     }
 
+    /* ── ADMIN LOCK & ACCESS SYSTEM CSS ── */
+    .btn-topbar-action {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .btn-topbar-action:hover {
+      background: var(--bg-hover);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn-topbar-action.danger:hover {
+      background: rgba(248, 81, 73, 0.2);
+      border-color: var(--error);
+      color: var(--error);
+    }
+
+    .lock-screen-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(13, 17, 23, 0.95);
+      backdrop-filter: blur(12px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .lock-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 440px;
+      text-align: center;
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+      animation: lockModalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes lockModalSlide {
+      from { opacity: 0; transform: scale(0.92) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .lock-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      display: inline-block;
+      padding: 16px;
+      background: rgba(88, 166, 255, 0.1);
+      border-radius: 50%;
+      border: 1px solid rgba(88, 166, 255, 0.2);
+    }
+
+    .lock-card h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .lock-card p {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    .badge-status.active {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--success);
+      border-color: rgba(63, 185, 80, 0.3);
+    }
+    .badge-status.inactive {
+      background: rgba(248, 81, 73, 0.15);
+      color: var(--error);
+      border-color: rgba(248, 81, 73, 0.3);
+    }
+
     @media (max-width: 768px) {
       .topbar {
         flex-direction: column !important;
@@ -1484,6 +1601,32 @@
         min-height: auto !important;
         flex: none !important;
         width: 100% !important;
+      }
+
+      /* Admin Topbar & Modaller Mobil Uyum */
+      .admin-topbar-actions {
+        width: 100% !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+        margin-left: 0 !important;
+        gap: 6px !important;
+      }
+      .btn-topbar-action {
+        flex: 1 1 calc(50% - 6px);
+        justify-content: center;
+        padding: 8px 10px !important;
+        font-size: 0.78rem !important;
+      }
+      .lock-card {
+        padding: 24px 18px !important;
+        max-width: 95vw !important;
+      }
+      .modal.wide {
+        width: 95vw !important;
+        max-width: 95vw !important;
+      }
+      .modal-body {
+        padding: 16px !important;
       }
     }
 
@@ -1723,10 +1866,32 @@
 
   <header class="topbar">
     <div class="logo">
-      <div class="logo-icon">⛏️</div>
+      <div class="logo-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#logo-grad-1)"/>
+          <path d="M2 17L12 22L22 17L12 12L2 17Z" fill="url(#logo-grad-2)"/>
+          <path d="M2 12L12 17L22 12L12 7L2 12Z" fill="url(#logo-grad-3)" fill-opacity="0.8"/>
+          <defs>
+            <linearGradient id="logo-grad-1" x1="2" y1="2" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#388bfd"/>
+              <stop offset="1" stop-color="#58a6ff"/>
+            </linearGradient>
+            <linearGradient id="logo-grad-2" x1="2" y1="12" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#238636"/>
+              <stop offset="1" stop-color="#2ea043"/>
+            </linearGradient>
+            <linearGradient id="logo-grad-3" x1="2" y1="7" x2="22" y2="17" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#1f6feb"/>
+              <stop offset="1" stop-color="#3fb950"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
       <div>
-        <h1>Minecraft AFK Client</h1>
-        <span>v3.0.0 • Sunay-Seyidli/mc-afk-mesajli</span>
+        <h1 style="display:flex; align-items:center; gap:8px;">
+          MinePulse <span style="background:linear-gradient(135deg, #238636, #2ea043); color:#fff; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:4px; letter-spacing:0.8px;">ENTERPRISE</span>
+        </h1>
+        <span>Kurumsal AFK Cloud Platformu v3.0</span>
       </div>
     </div>
     <div class="stats">
@@ -1744,10 +1909,59 @@
         <span class="value" id="bot-limit">-</span>
       </div>
     </div>
+
+    <!-- Admin Topbar Butonları -->
+    <div class="admin-topbar-actions" id="admin-topbar-actions" style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
+      <button class="btn-topbar-action" id="btn-open-proxy-modal" title="Bot - Proxy Eşleme Yöneticisi">
+        <span>🔗</span> Bot-Proxy Eşle
+      </button>
+      <button class="btn-topbar-action" id="btn-open-access-modal" title="Müşteri AFK Satış Linkleri">
+        <span>🔑</span> Müşteri Linkleri
+      </button>
+      <button class="btn-topbar-action" id="btn-open-password-modal" title="Admin Şifresi Değiştir">
+        <span>🔒</span> Şifre
+      </button>
+      <button class="btn-topbar-action danger" id="btn-admin-logout" title="Admin Oturumunu Kapat">
+        <span>🚪</span> Çıkış
+      </button>
+    </div>
+
+    <!-- Müşteri Portal Rozeti -->
+    <div id="customer-portal-badge" style="display:none; background: linear-gradient(135deg, #1f6feb, #238636); color: #fff; padding: 6px 14px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 700; margin-left: auto;">
+      🔑 Müşteri AFK Portalı • <span id="cust-label">Müşteri</span> (<span id="cust-bots-count">0</span>/<span id="cust-bot-limit">1</span> Bot)
+    </div>
+
     <div id="offline-badge" style="display:none; background: var(--warning); color: #000; padding: 6px 14px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 700; margin-left: auto;">
       ⚠️ Çevrimdışı Mod
     </div>
   </header>
+
+  <!-- 🔒 Admin Güvenlik Kilit Ekranı Overlay -->
+  <div id="admin-lock-screen" class="lock-screen-overlay" style="display:none;">
+    <div class="lock-card">
+      <div class="lock-icon">🔒</div>
+      <h2>Yönetici Güvenlik Girişi</h2>
+      <p>Minecraft AFK Client v3.0 Yönetici Paneline erişmek için admin şifrenizi giriniz.</p>
+      <div class="form-group" style="margin-top:20px; text-align:left;">
+        <label>ADMİN ŞİFRESİ</label>
+        <input type="password" id="admin-password-input" placeholder="••••••••" style="font-size:1.1rem; padding:12px; text-align:center;">
+      </div>
+      <div id="admin-login-error" style="color:var(--error); font-size:0.85rem; margin-bottom:12px; display:none; font-weight:600;"></div>
+      <button class="btn-new-server" id="btn-admin-login-submit" style="width:100%; justify-content:center; padding:12px; font-size:1rem;">
+        <span>🔓</span> Giriş Yap
+      </button>
+    </div>
+  </div>
+
+  <!-- ⚠️ Müşteri Erişim Devre Dışı Ekranı Overlay -->
+  <div id="customer-deactivated-screen" class="lock-screen-overlay" style="display:none;">
+    <div class="lock-card" style="border-color: rgba(248, 81, 73, 0.4);">
+      <div class="lock-icon" style="background: rgba(248, 81, 73, 0.1); border-color: rgba(248, 81, 73, 0.2);">⚠️</div>
+      <h2 style="color: var(--error);">Erişim Bağlantısı Pasif</h2>
+      <p style="margin-top: 10px;" id="customer-deactivated-reason">Bu AFK müşteri erişim bağlantısı yönetici tarafından durdurulmuş veya silinmiştir.</p>
+      <p style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">Lütfen hizmet aldığınız sistem yöneticisi ile iletişime geçin.</p>
+    </div>
+  </div>
 
   <main class="container page" id="page-server-browser">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
@@ -2038,6 +2252,177 @@
     </div>
   </div>
 
+  <!-- ── 1. Bot - Proxy Eşleme Modal ───────────────────── -->
+  <div class="modal-overlay" id="modal-proxy-mapping">
+    <div class="modal wide">
+      <div class="modal-header">
+        <h3><span>🔗</span> Bot - Proxy Eşleme Yöneticisi</h3>
+        <button class="modal-close" id="modal-proxy-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:0.83rem; color:var(--text-secondary); margin-bottom:16px; background:var(--bg-card); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border); line-height:1.5;">
+          💡 <b>Otomatik Proxy Eşleşmesi:</b> Bot isimlerine özel SOCKS5 veya HTTP proxy adresi kaydedin. Bot sunucuya sokulurken elle proxy yazılmasa bile arka planda otomatik olarak buradaki proxy kullanılır.
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label>BOT KULLANICI ADI</label>
+            <input type="text" id="proxy-map-bot-name" placeholder="Örn: Bot_01 veya Premium_Bot">
+          </div>
+          <div class="form-group" style="flex:1.5;">
+            <label>PROXY ADRESİ (IP:PORT veya IP:PORT:USER:PASS)</label>
+            <input type="text" id="proxy-map-proxy-str" placeholder="185.123.45.6:1080 veya user:pass@ip:port">
+          </div>
+        </div>
+        <button class="btn-primary" id="btn-save-proxy-map" style="width:100%; justify-content:center; margin-bottom:20px;">
+          <span>💾</span> Proxy Eşlemesini Kaydet
+        </button>
+
+        <h4 style="font-size:0.92rem; margin-bottom:10px; color:var(--text-primary);">📋 Kayıtlı Bot - Proxy Eşleşmeleri</h4>
+        <div style="max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-sm);">
+          <table style="width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left;">
+            <thead>
+              <tr style="background:var(--bg-tertiary); border-bottom:1px solid var(--border); color:var(--text-muted);">
+                <th style="padding:10px;">Bot İsmi</th>
+                <th style="padding:10px;">Eşlenen Proxy Adresi</th>
+                <th style="padding:10px; text-align:right;">İşlem</th>
+              </tr>
+            </thead>
+            <tbody id="proxy-mapping-tbody">
+              <tr><td colspan="3" style="padding:16px; text-align:center; color:var(--text-muted);">Henüz proxy eşleşmesi eklenmedi.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. Müşteri AFK Satış & Erişim Linkleri Modal ───────────── -->
+  <div class="modal-overlay" id="modal-access-keys">
+    <div class="modal wide">
+      <div class="modal-header">
+        <h3><span>🔑</span> Müşteri AFK Satış & Erişim Linkleri</h3>
+        <button class="modal-close" id="modal-access-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:0.83rem; color:var(--text-secondary); margin-bottom:16px; background:var(--bg-card); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border); line-height:1.5;">
+          🎯 <b>Özel Müşteri Bağlantıları:</b> Müşterilerinize satmak / vermek için şifresiz özel linkler oluşturun. Müşteri linke girdiğinde sadece kendi eklediği botları görür ve belirlediğiniz bot limitini aşamaz. İstediğiniz zaman linki kapatabilirsiniz.
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1.5;">
+            <label>MÜŞTERİ / PAKET ETİKETİ</label>
+            <input type="text" id="access-label-input" placeholder="Örn: Ahmet - 1 AFK Bot Paketi">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>BOT LİMİTİ</label>
+            <input type="number" id="access-limit-input" value="1" min="1" max="100">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>ÖZEL LINK ID (OPSİYONEL)</label>
+            <input type="text" id="access-custom-id-input" placeholder="Örn: ahmet-afk">
+          </div>
+        </div>
+        <button class="btn-primary" id="btn-create-access-key" style="width:100%; justify-content:center; margin-bottom:20px;">
+          <span>✨</span> Müşteri Erişim Linki Oluştur
+        </button>
+
+        <h4 style="font-size:0.92rem; margin-bottom:10px; color:var(--text-primary);">📜 Aktif Müşteri Bağlantıları</h4>
+        <div style="max-height:240px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-sm);">
+          <table style="width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left;">
+            <thead>
+              <tr style="background:var(--bg-tertiary); border-bottom:1px solid var(--border); color:var(--text-muted);">
+                <th style="padding:10px;">Etiket / Müşteri</th>
+                <th style="padding:10px;">Limit</th>
+                <th style="padding:10px;">Erişim Linki</th>
+                <th style="padding:10px;">Durum</th>
+                <th style="padding:10px; text-align:right;">İşlem</th>
+              </tr>
+            </thead>
+            <tbody id="access-keys-tbody">
+              <tr><td colspan="5" style="padding:16px; text-align:center; color:var(--text-muted);">Henüz müşteri erişim linki oluşturulmadı.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. Admin Şifresi Değiştir Modal ───────────────────────── -->
+  <div class="modal-overlay" id="modal-change-password">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><span>🔒</span> Admin Şifresini Değiştir</h3>
+        <button class="modal-close" id="modal-password-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>MEVCUT ADMİN ŞİFRESİ</label>
+          <input type="password" id="pass-old-input" placeholder="Mevcut şifreniz">
+        </div>
+        <div class="form-group">
+          <label>YENİ ADMİN ŞİFRESİ</label>
+          <input type="password" id="pass-new-input" placeholder="Yeni güvenli şifre">
+        </div>
+        <button class="btn-primary" id="btn-save-new-password" style="width:100%; justify-content:center; margin-top:10px;">
+          <span>💾</span> Şifreyi Güncelle
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4. Özel İşlem Onay Modalı (Confirm Dialog) ───────────── -->
+  <div class="modal-overlay" id="modal-custom-confirm">
+    <div class="modal" style="max-width:440px;">
+      <div class="modal-header">
+        <h3 id="confirm-title"><span>⚠️</span> İşlem Onayı</h3>
+        <button class="modal-close" id="confirm-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" style="font-size:0.92rem; color:var(--text-primary); line-height:1.5; margin-bottom:20px;">
+          Bu işlemi gerçekleştirmek istediğinize emin misiniz?
+        </p>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button class="btn-script" id="btn-confirm-cancel" style="padding:10px 18px;">İptal</button>
+          <button class="btn-script btn-script-stop" id="btn-confirm-ok" style="padding:10px 18px;">Evet, Onayla</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 5. Müşteri Link Düzenleme Modalı ───────────────────────── -->
+  <div class="modal-overlay" id="modal-edit-access-key">
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-header">
+        <h3><span>✏️</span> Müşteri Bağlantısını Düzenle</h3>
+        <button class="modal-close" id="modal-edit-access-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-access-id">
+        <div class="form-group">
+          <label>MÜŞTERİ / PAKET ETİKETİ</label>
+          <input type="text" id="edit-access-label" placeholder="Örn: Ahmet - 1 AFK Bot Paketi">
+        </div>
+        <div class="form-group">
+          <label>BOT LİMİTİ</label>
+          <input type="number" id="edit-access-limit" value="1" min="1" max="100">
+        </div>
+        <div class="form-group">
+          <label>ÖZEL LINK ID (ADRES)</label>
+          <input type="text" id="edit-access-custom-id" placeholder="ahmet-afk">
+        </div>
+        <div class="form-group">
+          <label>DURUM</label>
+          <select id="edit-access-active" style="width:100%; padding:10px; background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text-primary); font-family:inherit;">
+            <option value="true">🟢 Aktif (Giriş İznı Var)</option>
+            <option value="false">🔴 Pasif (Giriş Engellendi)</option>
+          </select>
+        </div>
+        <button class="btn-primary" id="btn-save-edit-access" style="width:100%; justify-content:center; margin-top:14px;">
+          <span>💾</span> Değişiklikleri Kaydet
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast-container" id="toast-container"></div>
 
   <!-- ── Inventory Modal ─────────────────────────────────── -->
@@ -2117,7 +2502,12 @@
       antiAfkAllState: false,
       mutedConsoles: new Set(),   // botId'ler - konsol mesajları gelmesin
       miningBots: new Set(),      // botId'ler - kaz modu açık
-      selectedInvSlot: null
+      selectedInvSlot: null,
+      isCustomerView: false,
+      accessKeyId: null,
+      customerKeyData: null,
+      proxyMappings: [],
+      accessKeys: []
     };
 
     const pages = {
@@ -2167,7 +2557,61 @@
       modalScript: document.getElementById('modal-script'),
       modalScriptClose: document.getElementById('modal-script-close'),
       modalInventory: document.getElementById('modal-inventory'),
-      modalInvClose: document.getElementById('modal-inv-close')
+      modalInvClose: document.getElementById('modal-inv-close'),
+
+      // Security & Store Elements
+      adminLockScreen: document.getElementById('admin-lock-screen'),
+      adminPasswordInput: document.getElementById('admin-password-input'),
+      adminLoginError: document.getElementById('admin-login-error'),
+      btnAdminLoginSubmit: document.getElementById('btn-admin-login-submit'),
+      adminTopbarActions: document.getElementById('admin-topbar-actions'),
+      btnAdminLogout: document.getElementById('btn-admin-logout'),
+      customerPortalBadge: document.getElementById('customer-portal-badge'),
+      custLabel: document.getElementById('cust-label'),
+      custBotsCount: document.getElementById('cust-bots-count'),
+      custBotLimit: document.getElementById('cust-bot-limit'),
+      customerDeactivatedScreen: document.getElementById('customer-deactivated-screen'),
+      customerDeactivatedReason: document.getElementById('customer-deactivated-reason'),
+
+      modalProxyMapping: document.getElementById('modal-proxy-mapping'),
+      modalProxyClose: document.getElementById('modal-proxy-close'),
+      btnOpenProxyModal: document.getElementById('btn-open-proxy-modal'),
+      proxyMapBotName: document.getElementById('proxy-map-bot-name'),
+      proxyMapProxyStr: document.getElementById('proxy-map-proxy-str'),
+      btnSaveProxyMap: document.getElementById('btn-save-proxy-map'),
+      proxyMappingTbody: document.getElementById('proxy-mapping-tbody'),
+
+      modalAccessKeys: document.getElementById('modal-access-keys'),
+      modalAccessClose: document.getElementById('modal-access-close'),
+      btnOpenAccessModal: document.getElementById('btn-open-access-modal'),
+      accessLabelInput: document.getElementById('access-label-input'),
+      accessLimitInput: document.getElementById('access-limit-input'),
+      accessCustomIdInput: document.getElementById('access-custom-id-input'),
+      btnCreateAccessKey: document.getElementById('btn-create-access-key'),
+      accessKeysTbody: document.getElementById('access-keys-tbody'),
+
+      modalChangePassword: document.getElementById('modal-change-password'),
+      modalPasswordClose: document.getElementById('modal-password-close'),
+      btnOpenPasswordModal: document.getElementById('btn-open-password-modal'),
+      passOldInput: document.getElementById('pass-old-input'),
+      passNewInput: document.getElementById('pass-new-input'),
+      btnSaveNewPassword: document.getElementById('btn-save-new-password'),
+
+      modalCustomConfirm: document.getElementById('modal-custom-confirm'),
+      confirmTitle: document.getElementById('confirm-title'),
+      confirmMessage: document.getElementById('confirm-message'),
+      btnConfirmCancel: document.getElementById('btn-confirm-cancel'),
+      btnConfirmOk: document.getElementById('btn-confirm-ok'),
+      confirmClose: document.getElementById('confirm-close'),
+
+      modalEditAccessKey: document.getElementById('modal-edit-access-key'),
+      modalEditAccessClose: document.getElementById('modal-edit-access-close'),
+      editAccessId: document.getElementById('edit-access-id'),
+      editAccessLabel: document.getElementById('edit-access-label'),
+      editAccessLimit: document.getElementById('edit-access-limit'),
+      editAccessCustomId: document.getElementById('edit-access-custom-id'),
+      editAccessActive: document.getElementById('edit-access-active'),
+      btnSaveEditAccess: document.getElementById('btn-save-edit-access')
     };
 
     // ── LocalStorage Sohbet Geçmişi ─────────────────────────────
@@ -2375,6 +2819,15 @@
       socket.on('chat-message', ({ botId, type, text, timestamp, json }) => {
         addConsoleMessage(botId, type, text, timestamp, json);
         saveMessageToStorage(botId, type, text, timestamp, json);
+      });
+
+      socket.on('store-updated', (data) => {
+        if (data) {
+          if (data.proxyMappings) state.proxyMappings = data.proxyMappings;
+          if (data.accessKeys) state.accessKeys = data.accessKeys;
+          renderProxyMappings();
+          renderAccessKeys();
+        }
       });
 
 
@@ -2767,22 +3220,22 @@
       if (removeBtn) {
         removeBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (confirm('"' + server.serverIp + '" sunucusundaki tüm botları çıkarmak istiyor musun?')) {
+          showCustomConfirm('Tüm Botları Çıkar', `"${server.serverIp}" sunucusundaki tüm botları çıkarmak istiyor musun?`, () => {
             if (!isOfflineMode && socket && typeof socket.emit === 'function') {
-            socket.emit('remove-server-bots', server.serverKey);
-          } else {
-            // Çevrimdışı mod - tüm botları yerel sil
-            const botsToRemove = server.bots || [];
-            botsToRemove.forEach(b => {
-              state.bots.delete(b.id);
-              state.consoles.delete(b.id);
-              clearStorageForBot(b.id);
-            });
-            updateServersFromBots();
-            renderServerBrowser();
-            showToast('success', 'Tüm botlar çıkarıldı (Çevrimdışı mod)');
-          }
-          }
+              socket.emit('remove-server-bots', server.serverKey);
+            } else {
+              // Çevrimdışı mod - tüm botları yerel sil
+              const botsToRemove = server.bots || [];
+              botsToRemove.forEach(b => {
+                state.bots.delete(b.id);
+                state.consoles.delete(b.id);
+                clearStorageForBot(b.id);
+              });
+              updateServersFromBots();
+              renderServerBrowser();
+              showToast('success', 'Tüm botlar çıkarıldı (Çevrimdışı mod)');
+            }
+          });
         });
       }
 
@@ -4690,7 +5143,16 @@ console.log('Oto yemek aktif');`
       }
 
       if (!isOfflineMode && socket && typeof socket.emit === 'function') {
-        socket.emit('add-bots-batch', { serverIp: ip, port, version, proxy, botNames, joinMessage, joinMessageDelay });
+        socket.emit('add-bots-batch', {
+          serverIp: ip,
+          port,
+          version,
+          proxy,
+          botNames,
+          joinMessage,
+          joinMessageDelay,
+          accessKeyId: state.isCustomerView ? state.accessKeyId : null
+        });
         showToast('success', botNames.length + ' bot ekleniyor...');
       } else {
         // Çevrimdışı mod - botları yerel olarak ekle (demo)
@@ -4813,14 +5275,14 @@ console.log('Oto yemek aktif');`
       const server = state.servers.get(state.currentServerKey);
       if (!server) return;
 
-      if (confirm('"' + server.serverIp + '" sunucusundaki TÜM botları çıkarmak istiyor musun?')) {
+      showCustomConfirm('Tüm Botları Çıkar', `"${server.serverIp}" sunucusundaki TÜM botları çıkarmak istiyor musun?`, () => {
         if (!isOfflineMode && socket && typeof socket.emit === 'function') {
           socket.emit('remove-server-bots', state.currentServerKey);
         } else {
           // Çevrimdışı mod
-          const server = state.servers.get(state.currentServerKey);
-          if (server) {
-            (server.bots || []).forEach(b => {
+          const srv = state.servers.get(state.currentServerKey);
+          if (srv) {
+            (srv.bots || []).forEach(b => {
               state.bots.delete(b.id);
               state.consoles.delete(b.id);
               clearStorageForBot(b.id);
@@ -4831,7 +5293,7 @@ console.log('Oto yemek aktif');`
           }
         }
         showPage('browser');
-      }
+      });
     });
 
     // ── Modal: Oyuncu Listesi ──────────────────────────────────
@@ -4902,7 +5364,529 @@ console.log('Oto yemek aktif');`
       return div.innerHTML;
     }
 
+    // ── Custom Confirm Dialog (Iframe & Mobile Compatible) ────
+    let currentConfirmCallback = null;
+
+    function showCustomConfirm(title, message, onOk) {
+      if (!els.modalCustomConfirm) {
+        if (typeof onOk === 'function') onOk();
+        return;
+      }
+      if (els.confirmTitle) els.confirmTitle.innerHTML = `<span>⚠️</span> ${escapeHtml(title)}`;
+      if (els.confirmMessage) els.confirmMessage.textContent = message;
+
+      currentConfirmCallback = onOk;
+      els.modalCustomConfirm.classList.add('active');
+    }
+
+    if (els.btnConfirmOk) {
+      els.btnConfirmOk.addEventListener('click', () => {
+        if (els.modalCustomConfirm) els.modalCustomConfirm.classList.remove('active');
+        if (typeof currentConfirmCallback === 'function') {
+          const cb = currentConfirmCallback;
+          currentConfirmCallback = null;
+          cb();
+        }
+      });
+    }
+
+    if (els.btnConfirmCancel) {
+      els.btnConfirmCancel.addEventListener('click', () => {
+        if (els.modalCustomConfirm) els.modalCustomConfirm.classList.remove('active');
+        currentConfirmCallback = null;
+      });
+    }
+
+    if (els.confirmClose) {
+      els.confirmClose.addEventListener('click', () => {
+        if (els.modalCustomConfirm) els.modalCustomConfirm.classList.remove('active');
+        currentConfirmCallback = null;
+      });
+    }
+
+    if (els.modalCustomConfirm) {
+      els.modalCustomConfirm.addEventListener('click', (e) => {
+        if (e.target === els.modalCustomConfirm) {
+          els.modalCustomConfirm.classList.remove('active');
+          currentConfirmCallback = null;
+        }
+      });
+    }
+
+    // ── Custom Clipboard Fallback ──────────────────────────────
+    function fallbackCopyText(text, successMsg = 'Bağlantı kopyalandı!') {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+        showToast('success', successMsg);
+      } catch (e) {
+        showToast('info', `Link: ${text}`);
+      }
+    }
+
+    // ── Custom Edit Access Key Modal ───────────────────────────
+    function openEditAccessKeyModal(key) {
+      if (!els.modalEditAccessKey || !key) return;
+      if (els.editAccessId) els.editAccessId.value = key.id;
+      if (els.editAccessLabel) els.editAccessLabel.value = key.label || '';
+      if (els.editAccessLimit) els.editAccessLimit.value = key.botLimit || 1;
+      if (els.editAccessCustomId) els.editAccessCustomId.value = key.id || '';
+      if (els.editAccessActive) els.editAccessActive.value = key.active ? 'true' : 'false';
+      els.modalEditAccessKey.classList.add('active');
+    }
+
+    if (els.modalEditAccessClose) {
+      els.modalEditAccessClose.addEventListener('click', () => {
+        if (els.modalEditAccessKey) els.modalEditAccessKey.classList.remove('active');
+      });
+    }
+
+    if (els.modalEditAccessKey) {
+      els.modalEditAccessKey.addEventListener('click', (e) => {
+        if (e.target === els.modalEditAccessKey) els.modalEditAccessKey.classList.remove('active');
+      });
+    }
+
+    if (els.btnSaveEditAccess) {
+      els.btnSaveEditAccess.addEventListener('click', () => {
+        const id = els.editAccessId ? els.editAccessId.value : '';
+        const label = els.editAccessLabel ? els.editAccessLabel.value.trim() : '';
+        const botLimit = els.editAccessLimit ? (parseInt(els.editAccessLimit.value, 10) || 1) : 1;
+        const newCustomId = els.editAccessCustomId ? els.editAccessCustomId.value.trim() : '';
+        const active = els.editAccessActive ? (els.editAccessActive.value === 'true') : true;
+
+        if (!id) return;
+
+        if (!isOfflineMode && socket) {
+          socket.emit('edit-access-key', { id, label, botLimit, newCustomId, active }, (res) => {
+            if (res && res.success) {
+              showToast('success', res.message || 'Müşteri bağlantı ayarları güncellendi.');
+              if (res.accessKeys) {
+                state.accessKeys = res.accessKeys;
+                renderAccessKeys();
+              }
+              if (els.modalEditAccessKey) els.modalEditAccessKey.classList.remove('active');
+            } else {
+              showToast('error', res ? res.message : 'Güncellenemedi.');
+            }
+          });
+        } else {
+          const k = (state.accessKeys || []).find(item => String(item.id).trim() === String(id).trim());
+          if (k) {
+            k.label = label || k.label;
+            k.botLimit = botLimit;
+            k.active = active;
+            if (newCustomId && newCustomId !== k.id) k.id = newCustomId;
+          }
+          renderAccessKeys();
+          if (els.modalEditAccessKey) els.modalEditAccessKey.classList.remove('active');
+          showToast('success', 'Müşteri ayarları güncellendi (Çevrimdışı).');
+        }
+      });
+    }
+
+    // ── Security & Store Functions ─────────────────────────────
+    function initSecurityAndAccessMode() {
+      const path = window.location.pathname;
+      const urlParams = new URLSearchParams(window.location.search);
+      let accessKey = urlParams.get('key');
+
+      if (!accessKey) {
+        if (path.startsWith('/access/')) {
+          accessKey = path.replace('/access/', '').trim();
+        } else if (path !== '/' && path !== '/index.html' && path.length > 1) {
+          const possibleKey = path.substring(1).trim();
+          if (possibleKey && !possibleKey.includes('.')) {
+            accessKey = possibleKey;
+          }
+        }
+      }
+
+      if (accessKey) {
+        // Müşteri Erişim Modu
+        state.isCustomerView = true;
+        state.accessKeyId = accessKey;
+        if (els.adminTopbarActions) els.adminTopbarActions.style.display = 'none';
+        if (els.customerPortalBadge) els.customerPortalBadge.style.display = 'inline-flex';
+
+        if (!isOfflineMode && socket) {
+          socket.emit('verify-access-key', { keyId: accessKey }, (res) => {
+            if (res && res.success && res.active) {
+              state.customerKeyData = res.keyData;
+              if (els.custLabel) els.custLabel.textContent = res.keyData.label || 'Müşteri';
+              if (els.custBotsCount) els.custBotsCount.textContent = res.currentBotsCount || 0;
+              if (els.custBotLimit) els.custBotLimit.textContent = res.keyData.botLimit || 1;
+            } else {
+              if (els.customerDeactivatedScreen) els.customerDeactivatedScreen.style.display = 'flex';
+              if (res && res.message && els.customerDeactivatedReason) {
+                els.customerDeactivatedReason.textContent = res.message;
+              }
+            }
+          });
+        }
+      } else {
+        // Admin Giriş Kontrolü
+        const isLoggedIn = sessionStorage.getItem('mc_admin_logged_in') === 'true';
+        if (!isLoggedIn) {
+          if (els.adminLockScreen) els.adminLockScreen.style.display = 'flex';
+        } else {
+          if (els.adminLockScreen) els.adminLockScreen.style.display = 'none';
+          fetchStoreData();
+        }
+      }
+    }
+
+    function fetchStoreData() {
+      if (!isOfflineMode && socket && typeof socket.emit === 'function') {
+        socket.emit('get-store-data', (data) => {
+          if (data) {
+            state.proxyMappings = data.proxyMappings || [];
+            state.accessKeys = data.accessKeys || [];
+            renderProxyMappings();
+            renderAccessKeys();
+          }
+        });
+      }
+    }
+
+    function handleAdminLogin() {
+      const password = els.adminPasswordInput.value.trim();
+      if (!password) {
+        els.adminLoginError.textContent = 'Lütfen admin şifrenizi giriniz.';
+        els.adminLoginError.style.display = 'block';
+        return;
+      }
+
+      if (!isOfflineMode && socket) {
+        socket.emit('admin-login', { password }, (res) => {
+          if (res && res.success) {
+            sessionStorage.setItem('mc_admin_logged_in', 'true');
+            els.adminLockScreen.style.display = 'none';
+            els.adminLoginError.style.display = 'none';
+            els.adminPasswordInput.value = '';
+            showToast('success', 'Admin girişi başarılı.');
+            fetchStoreData();
+          } else {
+            els.adminLoginError.textContent = res ? res.message : 'Hatalı şifre!';
+            els.adminLoginError.style.display = 'block';
+          }
+        });
+      } else {
+        if (password === 'admin123') {
+          sessionStorage.setItem('mc_admin_logged_in', 'true');
+          els.adminLockScreen.style.display = 'none';
+          showToast('success', 'Giriş Yapıldı (Çevrimdışı)');
+        } else {
+          els.adminLoginError.textContent = 'Hatalı şifre (Varsayılan: admin123)';
+          els.adminLoginError.style.display = 'block';
+        }
+      }
+    }
+
+    function renderProxyMappings() {
+      if (!els.proxyMappingTbody) return;
+      if (!state.proxyMappings || state.proxyMappings.length === 0) {
+        els.proxyMappingTbody.innerHTML = '<tr><td colspan="3" style="padding:16px; text-align:center; color:var(--text-muted);">Henüz proxy eşleşmesi eklenmedi.</td></tr>';
+        return;
+      }
+
+      els.proxyMappingTbody.innerHTML = state.proxyMappings.map(item => `
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:10px; font-weight:700; color:var(--accent);">${escapeHtml(item.botName)}</td>
+          <td style="padding:10px; font-family:monospace; color:var(--text-primary);">${escapeHtml(item.proxy)}</td>
+          <td style="padding:10px; text-align:right;">
+            <button class="btn-script btn-script-stop" style="padding:4px 8px; font-size:0.75rem;" data-delete-proxy-id="${item.id}">Sil</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAccessKeys() {
+      if (!els.accessKeysTbody) return;
+      if (!state.accessKeys || state.accessKeys.length === 0) {
+        els.accessKeysTbody.innerHTML = '<tr><td colspan="5" style="padding:16px; text-align:center; color:var(--text-muted);">Henüz müşteri erişim linki oluşturulmadı.</td></tr>';
+        return;
+      }
+
+      const origin = window.location.origin;
+
+      els.accessKeysTbody.innerHTML = state.accessKeys.map(key => {
+        const fullUrl = `${origin}/access/${key.id}`;
+        const activeClass = key.active ? 'active' : 'inactive';
+        const activeText = key.active ? '🟢 Aktif' : '🔴 Pasif';
+
+        return `
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px; font-weight:600; color:var(--text-primary);">${escapeHtml(key.label || 'Müşteri')}</td>
+            <td style="padding:10px; font-weight:700; color:var(--warning);">${key.botLimit} Bot</td>
+            <td style="padding:10px; font-family:monospace; font-size:0.75rem; color:var(--accent); word-break:break-all;">
+              ${escapeHtml(fullUrl)}
+            </td>
+            <td style="padding:10px;">
+              <span class="badge-status ${activeClass}" style="cursor:pointer;" data-toggle-key-id="${key.id}" data-active="${key.active}">
+                ${activeText}
+              </span>
+            </td>
+            <td style="padding:10px; text-align:right;">
+              <div style="display:flex; gap:4px; justify-content:flex-end; flex-wrap:wrap;">
+                <button class="btn-script" style="padding:4px 8px; font-size:0.75rem;" data-copy-url="${escapeHtml(fullUrl)}">📋 Kopyala</button>
+                <button class="btn-script" style="padding:4px 8px; font-size:0.75rem;" data-edit-key-id="${key.id}">✏️ Düzenle</button>
+                <button class="btn-script btn-script-stop" style="padding:4px 8px; font-size:0.75rem;" data-delete-key-id="${key.id}">🗑️ Sil</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Event Listeners for Security & Store
+    if (els.btnAdminLoginSubmit) {
+      els.btnAdminLoginSubmit.addEventListener('click', handleAdminLogin);
+    }
+    if (els.adminPasswordInput) {
+      els.adminPasswordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleAdminLogin();
+      });
+    }
+    if (els.btnAdminLogout) {
+      els.btnAdminLogout.addEventListener('click', () => {
+        sessionStorage.removeItem('mc_admin_logged_in');
+        if (els.adminLockScreen) els.adminLockScreen.style.display = 'flex';
+        showToast('info', 'Admin oturumu kapatıldı.');
+      });
+    }
+
+    if (els.btnOpenProxyModal) {
+      els.btnOpenProxyModal.addEventListener('click', () => {
+        if (els.modalProxyMapping) els.modalProxyMapping.classList.add('active');
+        fetchStoreData();
+      });
+    }
+    if (els.modalProxyClose) {
+      els.modalProxyClose.addEventListener('click', () => {
+        if (els.modalProxyMapping) els.modalProxyMapping.classList.remove('active');
+      });
+    }
+    if (els.btnSaveProxyMap) {
+      els.btnSaveProxyMap.addEventListener('click', () => {
+        const botName = els.proxyMapBotName.value.trim();
+        const proxy = els.proxyMapProxyStr.value.trim();
+        if (!botName || !proxy) {
+          showToast('error', 'Bot ismi ve Proxy adresi zorunludur.');
+          return;
+        }
+        if (!isOfflineMode && socket) {
+          socket.emit('save-proxy-mapping', { botName, proxy }, (res) => {
+            if (res && res.success) {
+              showToast('success', res.message || 'Proxy eşlemesi kaydedildi.');
+              els.proxyMapBotName.value = '';
+              els.proxyMapProxyStr.value = '';
+              if (res.proxyMappings) {
+                state.proxyMappings = res.proxyMappings;
+                renderProxyMappings();
+              }
+            } else {
+              showToast('error', res ? res.message : 'Kaydedilemedi');
+            }
+          });
+        }
+      });
+    }
+
+    if (els.proxyMappingTbody) {
+      els.proxyMappingTbody.addEventListener('click', (e) => {
+        const delBtn = e.target.closest('[data-delete-proxy-id]');
+        if (delBtn) {
+          const id = delBtn.dataset.deleteProxyId;
+          const item = (state.proxyMappings || []).find(m => String(m.id) === String(id));
+          const name = item ? item.botName : 'Proxy';
+
+          showCustomConfirm('Proxy Eşleşmesini Sil', `"${name}" için tanımlı proxy eşleşmesini silmek istediğinize emin misiniz?`, () => {
+            if (!isOfflineMode && socket) {
+              socket.emit('delete-proxy-mapping', { id }, (res) => {
+                if (res && res.success) {
+                  showToast('success', 'Proxy eşleşmesi silindi.');
+                  if (res.proxyMappings) {
+                    state.proxyMappings = res.proxyMappings;
+                    renderProxyMappings();
+                  }
+                }
+              });
+            } else {
+              state.proxyMappings = (state.proxyMappings || []).filter(m => String(m.id) !== String(id));
+              renderProxyMappings();
+              showToast('success', 'Proxy eşleşmesi silindi.');
+            }
+          });
+        }
+      });
+    }
+
+    if (els.btnOpenAccessModal) {
+      els.btnOpenAccessModal.addEventListener('click', () => {
+        if (els.modalAccessKeys) els.modalAccessKeys.classList.add('active');
+        fetchStoreData();
+      });
+    }
+    if (els.modalAccessClose) {
+      els.modalAccessClose.addEventListener('click', () => {
+        if (els.modalAccessKeys) els.modalAccessKeys.classList.remove('active');
+      });
+    }
+    if (els.btnCreateAccessKey) {
+      els.btnCreateAccessKey.addEventListener('click', () => {
+        const label = els.accessLabelInput.value.trim();
+        const botLimit = parseInt(els.accessLimitInput.value, 10) || 1;
+        const customId = els.accessCustomIdInput.value.trim();
+
+        if (!isOfflineMode && socket) {
+          socket.emit('create-access-key', { label, botLimit, customId }, (res) => {
+            if (res && res.success) {
+              showToast('success', 'Müşteri erişim linki oluşturuldu.');
+              els.accessLabelInput.value = '';
+              els.accessCustomIdInput.value = '';
+              if (res.accessKeys) {
+                state.accessKeys = res.accessKeys;
+                renderAccessKeys();
+              }
+            } else {
+              showToast('error', res ? res.message : 'Oluşturulamadı');
+            }
+          });
+        } else {
+          // Local offline fallback
+          const keyId = customId ? customId.trim().toLowerCase() : `afk_${Math.random().toString(36).substring(2,7)}`;
+          const newKey = { id: keyId, label: label || 'Müşteri', botLimit, active: true };
+          state.accessKeys = state.accessKeys || [];
+          state.accessKeys.push(newKey);
+          renderAccessKeys();
+          showToast('success', 'Müşteri linki oluşturuldu (Çevrimdışı).');
+        }
+      });
+    }
+
+    if (els.accessKeysTbody) {
+      els.accessKeysTbody.addEventListener('click', (e) => {
+        const copyBtn = e.target.closest('[data-copy-url]');
+        if (copyBtn) {
+          const url = copyBtn.dataset.copyUrl;
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(url).then(() => {
+              showToast('success', 'Müşteri erişim bağlantısı kopyalandı!');
+            }).catch(() => {
+              fallbackCopyText(url, 'Müşteri bağlantısı kopyalandı!');
+            });
+          } else {
+            fallbackCopyText(url, 'Müşteri bağlantısı kopyalandı!');
+          }
+          return;
+        }
+
+        const editBtn = e.target.closest('[data-edit-key-id]');
+        if (editBtn) {
+          const id = editBtn.dataset.editKeyId;
+          const currentKey = (state.accessKeys || []).find(k => String(k.id).trim() === String(id).trim());
+          if (currentKey) {
+            openEditAccessKeyModal(currentKey);
+          }
+          return;
+        }
+
+        const toggleBtn = e.target.closest('[data-toggle-key-id]');
+        if (toggleBtn) {
+          const id = toggleBtn.dataset.toggleKeyId;
+          const currentActive = toggleBtn.dataset.active === 'true';
+          if (!isOfflineMode && socket) {
+            socket.emit('toggle-access-key', { id, active: !currentActive }, (res) => {
+              if (res && res.success) {
+                showToast('info', res.message || 'Durum değiştirildi.');
+                if (res.accessKeys) {
+                  state.accessKeys = res.accessKeys;
+                  renderAccessKeys();
+                }
+              }
+            });
+          } else {
+            const k = (state.accessKeys || []).find(item => String(item.id) === String(id));
+            if (k) k.active = !currentActive;
+            renderAccessKeys();
+            showToast('info', `Bağlantı ${!currentActive ? 'aktif' : 'pasif'} yapıldı.`);
+          }
+          return;
+        }
+
+        const delBtn = e.target.closest('[data-delete-key-id]');
+        if (delBtn) {
+          const id = delBtn.dataset.deleteKeyId;
+          const currentKey = (state.accessKeys || []).find(k => String(k.id).trim() === String(id).trim());
+          const name = currentKey ? (currentKey.label || currentKey.id) : 'Bu linki';
+
+          showCustomConfirm('Müşteri Linkini Sil', `"${name}" müşteri erişim linkini silmek istediğinize emin misiniz?`, () => {
+            if (!isOfflineMode && socket) {
+              socket.emit('delete-access-key', { id }, (res) => {
+                if (res && res.success) {
+                  showToast('success', 'Erişim linki silindi.');
+                  if (res.accessKeys) {
+                    state.accessKeys = res.accessKeys;
+                    renderAccessKeys();
+                  }
+                } else {
+                  showToast('error', res ? res.message : 'Silinemedi.');
+                }
+              });
+            } else {
+              state.accessKeys = (state.accessKeys || []).filter(k => String(k.id).trim() !== String(id).trim());
+              renderAccessKeys();
+              showToast('success', 'Erişim linki silindi (Çevrimdışı).');
+            }
+          });
+        }
+      });
+    }
+
+    if (els.btnOpenPasswordModal) {
+      els.btnOpenPasswordModal.addEventListener('click', () => {
+        if (els.modalChangePassword) els.modalChangePassword.classList.add('active');
+      });
+    }
+    if (els.modalPasswordClose) {
+      els.modalPasswordClose.addEventListener('click', () => {
+        if (els.modalChangePassword) els.modalChangePassword.classList.remove('active');
+      });
+    }
+    if (els.btnSaveNewPassword) {
+      els.btnSaveNewPassword.addEventListener('click', () => {
+        const oldPassword = els.passOldInput.value.trim();
+        const newPassword = els.passNewInput.value.trim();
+        if (!oldPassword || !newPassword) {
+          showToast('error', 'Lütfen tüm alanları doldurun.');
+          return;
+        }
+        if (!isOfflineMode && socket) {
+          socket.emit('admin-change-password', { oldPassword, newPassword }, (res) => {
+            if (res && res.success) {
+              showToast('success', res.message || 'Admin şifresi güncellendi.');
+              els.passOldInput.value = '';
+              els.passNewInput.value = '';
+              if (els.modalChangePassword) els.modalChangePassword.classList.remove('active');
+            } else {
+              showToast('error', res ? res.message : 'Güncellenemedi!');
+            }
+          });
+        }
+      });
+    }
+
     // ── Başlangıç ──────────────────────────────────────────────
+    initSecurityAndAccessMode();
     renderServerBrowser();
   </script>
 

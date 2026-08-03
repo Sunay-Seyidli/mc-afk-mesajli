@@ -19,6 +19,7 @@ const os = require('os');
 const vm = require('vm');
 
 const AntiAfk = require('./antiAfk');
+const storeManager = require('./store');
 
 // ── Yardımcı Fonksiyonlar ───────────────────────────────────────
 
@@ -47,11 +48,39 @@ function generateId() {
 }
 
 function parseProxy(proxyString) {
-  if (!proxyString || !proxyString.includes(':')) return null;
-  const [host, portStr] = proxyString.split(':');
-  const port = parseInt(portStr, 10);
-  if (!host || isNaN(port)) return null;
-  return { host: host.trim(), port };
+  if (!proxyString || typeof proxyString !== 'string') return null;
+  let str = proxyString.trim();
+  if (!str) return null;
+
+  // Temizleme: protokol adını kaldır (socks5://, socks4:// vs.)
+  str = str.replace(/^(socks5|socks4|http|https):\/\//i, '');
+
+  // Format 1: user:pass@host:port
+  if (str.includes('@')) {
+    const [auth, hostPort] = str.split('@');
+    const [userId, password] = (auth || '').split(':');
+    const [host, portStr] = (hostPort || '').split(':');
+    const port = parseInt(portStr, 10);
+    if (host && !isNaN(port)) {
+      return { host: host.trim(), port, userId: userId || undefined, password: password || undefined };
+    }
+  }
+
+  // Format 2: host:port veya host:port:user:pass
+  const parts = str.split(':');
+  if (parts.length === 2) {
+    const [host, portStr] = parts;
+    const port = parseInt(portStr, 10);
+    if (host && !isNaN(port)) return { host: host.trim(), port };
+  } else if (parts.length === 4) {
+    const [host, portStr, userId, password] = parts;
+    const port = parseInt(portStr, 10);
+    if (host && !isNaN(port)) {
+      return { host: host.trim(), port, userId: userId.trim(), password: password.trim() };
+    }
+  }
+
+  return null;
 }
 
 function cleanMcJsonToText(comp) {
@@ -147,9 +176,9 @@ class BotManager {
     /** @type {Map<string, Object>} - Aktif botlar (id -> botData) */
     this.bots = new Map();
     /** @type {number} - Bot başına tahmini RAM (MB) */
-    this.ramPerBot = 200;
-    /** @type {number} - Minimum bot limiti */
-    this.minBots = 1;
+    this.ramPerBot = 60;
+    /** @type {number} - Minimum varsayılan bot limiti */
+    this.minBots = 20;
     /** @type {number|null} - Manuel override limiti */
     this.manualMaxBots = process.env.MAX_BOTS ? parseInt(process.env.MAX_BOTS, 10) : null;
   }
@@ -165,9 +194,10 @@ class BotManager {
     if (this.manualMaxBots !== null) {
       maxBots = this.manualMaxBots;
     } else {
-      const allocatableRam = Math.floor(availableRamMB * 0.6);
-      maxBots = Math.max(this.minBots, Math.floor(allocatableRam / this.ramPerBot));
-      maxBots = Math.min(maxBots, 20);
+      // RAM'e dayalı tam dinamik hesaplama (bot başına 60MB tahmini alan)
+      const allocatableRam = Math.floor(totalRamMB * 0.85);
+      const calculated = Math.floor(allocatableRam / this.ramPerBot);
+      maxBots = Math.max(20, calculated);
     }
 
     return { maxBots, usedRamMB, totalRamMB, botCount: this.bots.size };
@@ -314,23 +344,47 @@ class BotManager {
   // ── Bot Ekleme ──────────────────────────────────────────────
 
   async addBot(config) {
-    const { ip, port = 25565, botName, version, proxy, joinMessage, joinMessageDelay } = config;
+    const { ip, port = 25565, botName, version, proxy, joinMessage, joinMessageDelay, accessKeyId } = config;
 
     if (!ip || !botName) {
       return { success: false, message: 'IP ve bot adı zorunludur.' };
+    }
+
+    // Müşteri Erişim Linki (accessKey) kontrolü
+    if (accessKeyId) {
+      const keyData = storeManager.getAccessKey(accessKeyId);
+      if (!keyData || !keyData.active) {
+        return { success: false, message: 'Bu erişim bağlantısı pasif duruma getirilmiştir veya geçersizdir.' };
+      }
+      let currentKeyBotsCount = 0;
+      for (const [_, b] of this.bots) {
+        if (b.accessKeyId === accessKeyId) currentKeyBotsCount++;
+      }
+      if (currentKeyBotsCount >= keyData.botLimit) {
+        return { success: false, message: `Bu erişim bağlantısının bot limitine ulaşıldı (Maksimum: ${keyData.botLimit} bot).` };
+      }
     }
 
     const ramUsage = this.getRamUsage();
     if (this.bots.size >= ramUsage.maxBots) {
       return { 
         success: false, 
-        message: `Bot limitine ulaşıldı (${ramUsage.botCount}/${ramUsage.maxBots}). RAM: ${ramUsage.usedRamMB}/${ramUsage.totalRamMB} MB` 
+        message: `Sistem bot limitine ulaşıldı (${ramUsage.botCount}/${ramUsage.maxBots}). RAM: ${ramUsage.usedRamMB}/${ramUsage.totalRamMB} MB` 
       };
+    }
+
+    // Proxy Kontrolü: Eğer elle proxy girilmemişse, Bot-Proxy eşleşme veritabanından sorgula
+    let finalProxyStr = proxy;
+    if (!finalProxyStr || !finalProxyStr.trim()) {
+      const mappedProxy = storeManager.getProxyForBot(botName);
+      if (mappedProxy) {
+        finalProxyStr = mappedProxy;
+      }
     }
 
     const botId = generateId();
     const serverPort = parseInt(port, 10) || 25565;
-    const proxyConfig = parseProxy(proxy);
+    const proxyConfig = parseProxy(finalProxyStr);
     const serverKey = getServerKey(ip, serverPort);
 
     const botData = {
@@ -343,6 +397,7 @@ class BotManager {
       version: version || '1.20.1',
       hasProxy: !!proxyConfig,
       proxyConfig,
+      accessKeyId: accessKeyId || null,
       players: [],
       antiAfk: null,
       instance: null,
@@ -351,6 +406,10 @@ class BotManager {
       joinMessage: joinMessage || '',
       joinMessageDelay: typeof joinMessageDelay !== 'undefined' ? Number(joinMessageDelay) : 3
     };
+
+    if (accessKeyId) {
+      storeManager.addBotToAccessKey(accessKeyId, botId);
+    }
 
     this.bots.set(botId, botData);
     this.emitBotUpdate();
@@ -427,7 +486,7 @@ class BotManager {
 
       if (proxyConfig) {
         botOptions.connect = (client) => {
-          SocksClient.createConnection({
+          const socksOptions = {
             proxy: {
               host: proxyConfig.host,
               port: proxyConfig.port,
@@ -438,7 +497,11 @@ class BotManager {
               host: serverIp,
               port: serverPort
             }
-          }, (err, info) => {
+          };
+          if (proxyConfig.userId) socksOptions.proxy.userId = proxyConfig.userId;
+          if (proxyConfig.password) socksOptions.proxy.password = proxyConfig.password;
+
+          SocksClient.createConnection(socksOptions, (err, info) => {
             if (err) {
               if (!resolved) {
                 resolved = true;
@@ -1822,6 +1885,10 @@ class BotManager {
       } catch (err) {
         // Bot zaten kapalı olabilir
       }
+    }
+
+    if (botData.accessKeyId) {
+      storeManager.removeBotFromAccessKey(botData.accessKeyId, botId);
     }
 
     this.bots.delete(botId);

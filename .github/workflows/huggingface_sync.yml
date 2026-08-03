@@ -23,8 +23,8 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "GitHub Actions"
           
-          # Target space: Uses HF_SPACE secret if set (e.g. qwatro/afk-mc or Sunay-Seyidli/mc-afk-mesajli), otherwise defaults to qwatro/afk-mc
-          TARGET_SPACE="${HF_SPACE:-qwatro/afk-mc}"
+          # Target space: Uses HF_SPACE secret if set, otherwise defaults to minepulse/afk-cloud
+          TARGET_SPACE="${HF_SPACE:-minepulse/afk-cloud}"
           echo "Hugging Face Space Target: $TARGET_SPACE"
           
           git remote add space "https://user:$HF_TOKEN@huggingface.co/spaces/$TARGET_SPACE"

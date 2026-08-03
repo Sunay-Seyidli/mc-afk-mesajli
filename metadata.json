@@ -1,6 +1,6 @@
 {
-  "name": "Minecraft AFK Client v3",
-  "description": "Minecraft AFK Client v3 with Bot Control, Scripts, SOCKS5 proxies, and Server Browser.",
+  "name": "MinePulse AFK Cloud Enterprise",
+  "description": "Kurumsal Minecraft AFK Bot Yöneticisi, Akıllı Yanıt ve Sunucu Portalı",
   "requestFramePermissions": ["camera", "microphone", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

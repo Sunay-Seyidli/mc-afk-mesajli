@@ -1,17 +1,16 @@
 ---
-title: Minecraft AFK Client
-emoji: 🤖
+title: MinePulse AFK Cloud Enterprise
+emoji: ⚡
 colorFrom: green
 colorTo: blue
 sdk: docker
-app_port: 7860
+app_port: 3000
 pinned: false
-repository: Sunay-Seyidli/mc-afk-mesajli
 ---
 
-# Minecraft AFK Client v3 (mc-afk-mesajli)
+# MinePulse AFK Cloud Enterprise (v3.0)
 
-Minecraft AFK Bot Yöneticisi ve Akıllı Yanıt Sistemi - Hugging Face Repository: `Sunay-Seyidli/mc-afk-mesajli`
+Kurumsal Minecraft AFK Bot Yöneticisi, Akıllı Yanıt ve Otomasyon Portalı.
 
 ## Özellikler
 - **Doğal İnsansı Anti-AFK**: S-Curve Cosine interpolasyonlu bakış ve mikro adımlama.

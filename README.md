@@ -6,11 +6,13 @@ colorTo: blue
 sdk: docker
 app_port: 3000
 pinned: false
+repository: QWAtro/afk-mc
 ---
 
 # MinePulse AFK Cloud Enterprise (v3.0)
 
 Kurumsal Minecraft AFK Bot Yöneticisi, Akıllı Yanıt ve Otomasyon Portalı.
+Hugging Face Space Repository: `QWAtro/afk-mc`
 
 ## Özellikler
 - **Doğal İnsansı Anti-AFK**: S-Curve Cosine interpolasyonlu bakış ve mikro adımlama.

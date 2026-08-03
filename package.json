@@ -3,6 +3,11 @@
   "version": "3.0.0",
   "description": "Kurumsal Minecraft AFK Bot Yöneticisi & Akıllı Otomasyon Portalı",
   "main": "server.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://huggingface.co/spaces/QWAtro/afk-mc"
+  },
+  "homepage": "https://huggingface.co/spaces/QWAtro/afk-mc",
   "scripts": {
     "start": "node server.ts",
     "dev": "node server.ts",

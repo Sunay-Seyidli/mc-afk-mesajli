@@ -11,6 +11,9 @@ RUN npm install
 # Copy the entire workspace files
 COPY . .
 
+# Set default port for Hugging Face Spaces
+ENV PORT=7860
+
 # Expose the configured app port
 EXPOSE 7860
 

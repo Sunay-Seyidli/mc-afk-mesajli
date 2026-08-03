@@ -530,8 +530,8 @@ io.on('connection', (socket) => {
   });
 
   // ── Müşteri Erişim Linki (Access Key) Olayları ──────────────
-  socket.on('create-access-key', ({ label, botLimit, customId }, callback) => {
-    const res = storeManager.createAccessKey({ label, botLimit, customId });
+  socket.on('create-access-key', ({ label, botLimit, customId, defaultProxy }, callback) => {
+    const res = storeManager.createAccessKey({ label, botLimit, customId, defaultProxy });
     const keys = storeManager.getAccessKeys();
     if (typeof callback === 'function') {
       callback({
@@ -542,8 +542,8 @@ io.on('connection', (socket) => {
     io.emit('store-updated', { proxyMappings: storeManager.getProxyMappings(), accessKeys: keys });
   });
 
-  socket.on('edit-access-key', ({ id, label, botLimit, newCustomId, active }, callback) => {
-    const res = storeManager.updateAccessKey(id, { label, botLimit, newCustomId, active });
+  socket.on('edit-access-key', ({ id, label, botLimit, newCustomId, active, defaultProxy }, callback) => {
+    const res = storeManager.updateAccessKey(id, { label, botLimit, newCustomId, active, defaultProxy });
     const keys = storeManager.getAccessKeys();
     if (typeof callback === 'function') {
       callback({

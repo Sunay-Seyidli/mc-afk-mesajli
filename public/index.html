@@ -2138,10 +2138,11 @@
           <div class="hint">Her satıra bir bot adı yazın. Birden fazla bot aynı anda eklenecek.</div>
         </div>
         <div class="form-group">
-          <label>SOCKS5 Proxy (opsiyonel)</label>
+          <label style="color:#58a6ff; font-weight:700;">SOCKS5 PROXY (IP:PORT) <span style="color:#f85149;">* ZORUNLU</span></label>
           <div class="proxy-input-wrapper">
-            <input type="text" id="modal-proxy" placeholder="ip:port">
+            <input type="text" id="modal-proxy" placeholder="Örn: 185.123.45.6:1080 veya user:pass@ip:port" required>
           </div>
+          <div class="hint" style="color:#d29922;">⚠️ Hugging Face sunucusunun Minecraft IP banı almaması için proxy girmek ZORUNLUDUR.</div>
         </div>
         <div class="form-group">
           <label>Oto Giriş / Yeniden Bağlanma Mesajı (opsiyonel)</label>
@@ -2312,14 +2313,19 @@
             <label>MÜŞTERİ / PAKET ETİKETİ</label>
             <input type="text" id="access-label-input" placeholder="Örn: Ahmet - 1 AFK Bot Paketi">
           </div>
-          <div class="form-group" style="flex:1;">
+          <div class="form-group" style="flex:0.8;">
             <label>BOT LİMİTİ</label>
             <input type="number" id="access-limit-input" value="1" min="1" max="100">
           </div>
           <div class="form-group" style="flex:1;">
-            <label>ÖZEL LINK ID (OPSİYONEL)</label>
+            <label>ÖZEL LINK ID (ADRES)</label>
             <input type="text" id="access-custom-id-input" placeholder="Örn: ahmet-afk">
           </div>
+        </div>
+        <div class="form-group" style="margin-top:-4px;">
+          <label>VARSAYILAN PROXY (IP:PORT - HF IP BAN ÖNLEME)</label>
+          <input type="text" id="access-default-proxy-input" placeholder="Örn: 185.123.45.6:1080 veya user:pass@ip:port (Opsiyonel)">
+          <div class="hint">Bu linki kullanan müşteri bot eklediğinde bu proxy adresi otomatik olarak atanır (müşteri değiştirebilir).</div>
         </div>
         <button class="btn-primary" id="btn-create-access-key" style="width:100%; justify-content:center; margin-bottom:20px;">
           <span>✨</span> Müşteri Erişim Linki Oluştur
@@ -2333,6 +2339,7 @@
                 <th style="padding:10px;">Etiket / Müşteri</th>
                 <th style="padding:10px;">Limit</th>
                 <th style="padding:10px;">Erişim Linki</th>
+                <th style="padding:10px;">Varsayılan Proxy</th>
                 <th style="padding:10px;">Durum</th>
                 <th style="padding:10px; text-align:right;">İşlem</th>
               </tr>
@@ -2408,6 +2415,11 @@
         <div class="form-group">
           <label>ÖZEL LINK ID (ADRES)</label>
           <input type="text" id="edit-access-custom-id" placeholder="ahmet-afk">
+        </div>
+        <div class="form-group">
+          <label>VARSAYILAN PROXY (IP:PORT - HF IP BAN ÖNLEME)</label>
+          <input type="text" id="edit-access-default-proxy" placeholder="Örn: 185.123.45.6:1080 (Opsiyonel)">
+          <div class="hint">Müşteri bot eklediğinde varsayılan olarak bu proxy gelir. Müşteri değiştirebilir.</div>
         </div>
         <div class="form-group">
           <label>DURUM</label>
@@ -2610,8 +2622,10 @@
       editAccessLabel: document.getElementById('edit-access-label'),
       editAccessLimit: document.getElementById('edit-access-limit'),
       editAccessCustomId: document.getElementById('edit-access-custom-id'),
+      editAccessDefaultProxy: document.getElementById('edit-access-default-proxy'),
       editAccessActive: document.getElementById('edit-access-active'),
-      btnSaveEditAccess: document.getElementById('btn-save-edit-access')
+      btnSaveEditAccess: document.getElementById('btn-save-edit-access'),
+      accessDefaultProxyInput: document.getElementById('access-default-proxy-input')
     };
 
     // ── LocalStorage Sohbet Geçmişi ─────────────────────────────
@@ -5078,7 +5092,9 @@ console.log('Oto yemek aktif');`
       els.modalServerPort.value = server.serverPort;
       els.modalServerPort.readOnly = true;
       els.modalBotVersion.value = server.version;
-      els.modalProxy.value = server.hasProxy ? (server.proxy || '') : '';
+      const defaultServerProxy = server.hasProxy ? (server.proxy || '') : '';
+      const defaultCustProxy = (state.isCustomerView && state.customerKeyData && state.customerKeyData.defaultProxy) ? state.customerKeyData.defaultProxy : '';
+      els.modalProxy.value = defaultServerProxy || defaultCustProxy || '';
       els.modalBotNames.value = '';
       if (els.modalJoinMessage) els.modalJoinMessage.value = '';
       if (els.modalJoinDelay) els.modalJoinDelay.value = '3';
@@ -5092,7 +5108,8 @@ console.log('Oto yemek aktif');`
       els.modalServerPort.value = '25565';
       els.modalServerPort.readOnly = false;
       els.modalBotVersion.value = '1.20.1';
-      els.modalProxy.value = '';
+      const defaultCustProxy = (state.isCustomerView && state.customerKeyData && state.customerKeyData.defaultProxy) ? state.customerKeyData.defaultProxy : '';
+      els.modalProxy.value = defaultCustProxy || '';
       els.modalBotNames.value = '';
       if (els.modalJoinMessage) els.modalJoinMessage.value = '';
       if (els.modalJoinDelay) els.modalJoinDelay.value = '3';
@@ -5127,6 +5144,11 @@ console.log('Oto yemek aktif');`
 
       if (!ip) {
         showToast('error', 'Sunucu IP girin.');
+        return;
+      }
+
+      if (!proxy) {
+        showToast('error', 'Hugging Face IP banını önlemek için SOCKS5 Proxy adresi (IP:PORT) girilmesi ZORUNLUDUR!');
         return;
       }
 
@@ -5439,6 +5461,7 @@ console.log('Oto yemek aktif');`
       if (els.editAccessLabel) els.editAccessLabel.value = key.label || '';
       if (els.editAccessLimit) els.editAccessLimit.value = key.botLimit || 1;
       if (els.editAccessCustomId) els.editAccessCustomId.value = key.id || '';
+      if (els.editAccessDefaultProxy) els.editAccessDefaultProxy.value = key.defaultProxy || '';
       if (els.editAccessActive) els.editAccessActive.value = key.active ? 'true' : 'false';
       els.modalEditAccessKey.classList.add('active');
     }
@@ -5461,12 +5484,13 @@ console.log('Oto yemek aktif');`
         const label = els.editAccessLabel ? els.editAccessLabel.value.trim() : '';
         const botLimit = els.editAccessLimit ? (parseInt(els.editAccessLimit.value, 10) || 1) : 1;
         const newCustomId = els.editAccessCustomId ? els.editAccessCustomId.value.trim() : '';
+        const defaultProxy = els.editAccessDefaultProxy ? els.editAccessDefaultProxy.value.trim() : '';
         const active = els.editAccessActive ? (els.editAccessActive.value === 'true') : true;
 
         if (!id) return;
 
         if (!isOfflineMode && socket) {
-          socket.emit('edit-access-key', { id, label, botLimit, newCustomId, active }, (res) => {
+          socket.emit('edit-access-key', { id, label, botLimit, newCustomId, active, defaultProxy }, (res) => {
             if (res && res.success) {
               showToast('success', res.message || 'Müşteri bağlantı ayarları güncellendi.');
               if (res.accessKeys) {
@@ -5612,7 +5636,7 @@ console.log('Oto yemek aktif');`
     function renderAccessKeys() {
       if (!els.accessKeysTbody) return;
       if (!state.accessKeys || state.accessKeys.length === 0) {
-        els.accessKeysTbody.innerHTML = '<tr><td colspan="5" style="padding:16px; text-align:center; color:var(--text-muted);">Henüz müşteri erişim linki oluşturulmadı.</td></tr>';
+        els.accessKeysTbody.innerHTML = '<tr><td colspan="6" style="padding:16px; text-align:center; color:var(--text-muted);">Henüz müşteri erişim linki oluşturulmadı.</td></tr>';
         return;
       }
 
@@ -5622,6 +5646,7 @@ console.log('Oto yemek aktif');`
         const fullUrl = `${origin}/access/${key.id}`;
         const activeClass = key.active ? 'active' : 'inactive';
         const activeText = key.active ? '🟢 Aktif' : '🔴 Pasif';
+        const proxyBadge = key.defaultProxy ? `<span style="color:var(--accent); font-family:monospace; font-size:0.75rem;">🛡️ ${escapeHtml(key.defaultProxy)}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Yok (HF Direkt)</span>`;
 
         return `
           <tr style="border-bottom:1px solid var(--border);">
@@ -5630,6 +5655,7 @@ console.log('Oto yemek aktif');`
             <td style="padding:10px; font-family:monospace; font-size:0.75rem; color:var(--accent); word-break:break-all;">
               ${escapeHtml(fullUrl)}
             </td>
+            <td style="padding:10px;">${proxyBadge}</td>
             <td style="padding:10px;">
               <span class="badge-status ${activeClass}" style="cursor:pointer;" data-toggle-key-id="${key.id}" data-active="${key.active}">
                 ${activeText}
@@ -5746,13 +5772,15 @@ console.log('Oto yemek aktif');`
         const label = els.accessLabelInput.value.trim();
         const botLimit = parseInt(els.accessLimitInput.value, 10) || 1;
         const customId = els.accessCustomIdInput.value.trim();
+        const defaultProxy = els.accessDefaultProxyInput ? els.accessDefaultProxyInput.value.trim() : '';
 
         if (!isOfflineMode && socket) {
-          socket.emit('create-access-key', { label, botLimit, customId }, (res) => {
+          socket.emit('create-access-key', { label, botLimit, customId, defaultProxy }, (res) => {
             if (res && res.success) {
               showToast('success', 'Müşteri erişim linki oluşturuldu.');
               els.accessLabelInput.value = '';
               els.accessCustomIdInput.value = '';
+              if (els.accessDefaultProxyInput) els.accessDefaultProxyInput.value = '';
               if (res.accessKeys) {
                 state.accessKeys = res.accessKeys;
                 renderAccessKeys();
@@ -5764,7 +5792,7 @@ console.log('Oto yemek aktif');`
         } else {
           // Local offline fallback
           const keyId = customId ? customId.trim().toLowerCase() : `afk_${Math.random().toString(36).substring(2,7)}`;
-          const newKey = { id: keyId, label: label || 'Müşteri', botLimit, active: true };
+          const newKey = { id: keyId, label: label || 'Müşteri', botLimit, defaultProxy, active: true };
           state.accessKeys = state.accessKeys || [];
           state.accessKeys.push(newKey);
           renderAccessKeys();

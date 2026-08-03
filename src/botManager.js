@@ -373,13 +373,25 @@ class BotManager {
       };
     }
 
-    // Proxy Kontrolü: Eğer elle proxy girilmemişse, Bot-Proxy eşleşme veritabanından sorgula
+    // Proxy Kontrolü: Proxy adresi zorunlu kılınır (HF IP Ban Önleme)
     let finalProxyStr = proxy;
     if (!finalProxyStr || !finalProxyStr.trim()) {
       const mappedProxy = storeManager.getProxyForBot(botName);
       if (mappedProxy) {
         finalProxyStr = mappedProxy;
+      } else if (accessKeyId) {
+        const keyData = storeManager.getAccessKey(accessKeyId);
+        if (keyData && keyData.defaultProxy) {
+          finalProxyStr = keyData.defaultProxy;
+        }
       }
+    }
+
+    if (!finalProxyStr || !finalProxyStr.trim()) {
+      return { 
+        success: false, 
+        message: 'Hugging Face IP banını önlemek için SOCKS5 Proxy adresi (IP:PORT) girilmesi ZORUNLUDUR!' 
+      };
     }
 
     const botId = generateId();

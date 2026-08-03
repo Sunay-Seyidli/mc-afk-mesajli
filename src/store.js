@@ -127,7 +127,7 @@ class StoreManager {
     return this.data.accessKeys.find(k => String(k.id).trim() === targetId) || null;
   }
 
-  createAccessKey({ label, botLimit, customId }) {
+  createAccessKey({ label, botLimit, customId, defaultProxy }) {
     const keyId = customId
       ? customId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '')
       : `afk_${Math.random().toString(36).substring(2, 9)}`;
@@ -143,6 +143,7 @@ class StoreManager {
       id: keyId,
       label: label || 'Müşteri AFK Paketi',
       botLimit: parseInt(botLimit, 10) || 1,
+      defaultProxy: defaultProxy ? String(defaultProxy).trim() : '',
       active: true, // Aktif mi
       createdBots: [], // bu link üzerinden açılan bot id'leri
       createdAt: new Date().toISOString()
@@ -170,6 +171,7 @@ class StoreManager {
     if (typeof updates.active === 'boolean') key.active = updates.active;
     if (updates.label !== undefined && updates.label !== null) key.label = String(updates.label).trim();
     if (updates.botLimit !== undefined) key.botLimit = parseInt(updates.botLimit, 10) || 1;
+    if (updates.defaultProxy !== undefined) key.defaultProxy = String(updates.defaultProxy).trim();
 
     this.saveData();
     return { success: true, key };

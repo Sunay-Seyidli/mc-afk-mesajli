@@ -1,33 +1,23 @@
 {
   "name": "minepulse-afk-cloud",
-  "version": "3.0.0",
-  "description": "Kurumsal Minecraft AFK Bot Yöneticisi & Akıllı Otomasyon Portalı",
+  "version": "3.1.0",
+  "description": "Minecraft AFK Bot Yoneticisi & Otomasyon Portali",
   "main": "server.ts",
-  "repository": {
-    "type": "git",
-    "url": "https://huggingface.co/spaces/QWAtro/afk-mc"
-  },
-  "homepage": "https://huggingface.co/spaces/QWAtro/afk-mc",
   "scripts": {
     "start": "node server.ts",
-    "dev": "node server.ts",
-    "build": "echo 'No build step required'"
+    "dev": "node server.ts"
   },
   "dependencies": {
-    "@google/genai": "^2.8.0",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
     "minecraft-data": "^3.112.0",
-    "mineflayer": "^4.14.0",
+    "mineflayer": "^4.37.1",
     "mineflayer-armor-manager": "^2.0.1",
     "mineflayer-auto-eat": "^5.0.3",
     "mineflayer-pathfinder": "^2.4.5",
-    "socket.io": "^4.7.4",
-    "socks": "^2.7.1",
+    "socket.io": "^4.7.5",
+    "socks": "^2.8.3",
     "vec3": "^0.2.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -509,6 +509,8 @@ class BotManager {
       const botOptions = {
         username: name,
         version: optVersion,
+        host: serverIp,
+        port: serverPort
       };
 
       if (proxyConfig) {
@@ -541,10 +543,6 @@ class BotManager {
             client.emit('connect');
           });
         };
-        botOptions.fakeHost = serverIp;
-      } else {
-        botOptions.host = serverIp;
-        botOptions.port = serverPort;
       }
 
       const bot = mineflayer.createBot(botOptions);
@@ -640,6 +638,17 @@ class BotManager {
           this.emitBotUpdate();
           this.emitChatMessage(botData.id, 'system', '✅ Sunucuya giriş yapıldı.');
 
+          // Auto-eat plugin'ini yükle
+          try {
+            const autoeatPkg = require('mineflayer-auto-eat');
+            const autoeatLoader = autoeatPkg.loader;
+            if (typeof autoeatLoader === 'function' && !bot.hasPlugin(autoeatLoader)) {
+              bot.loadPlugin(autoeatLoader);
+            }
+          } catch (e) {
+            console.warn('[BotManager] auto-eat plugin load failed:', e.message);
+          }
+
           botData.antiAfk = new AntiAfk(bot);
 
           // Eğer antiAFK tercih edilmişse otomatik geri yükle (6.5 sn gecikmeli ki lobiden geçsin)
@@ -651,26 +660,6 @@ class BotManager {
                 this.emitBotUpdate();
               }
             }, 6500);
-          }
-
-          // Advanced Plugins setup
-          try {
-            const autoeatPkg = require('mineflayer-auto-eat');
-            const autoeat = autoeatPkg.plugin || autoeatPkg.loader || autoeatPkg.autoeat || autoeatPkg.autoEat || autoeatPkg.default || autoeatPkg;
-            if (typeof autoeat === 'function') {
-              bot.loadPlugin(autoeat);
-            } else {
-              console.error('[BotManager] auto-eat plugin is not a function:', typeof autoeat);
-            }
-          } catch (e) {
-            console.error('[BotManager] auto-eat plugin load failed:', e);
-          }
-
-          try {
-            const pathfinder = require('mineflayer-pathfinder').pathfinder;
-            bot.loadPlugin(pathfinder);
-          } catch (e) {
-            console.error('[BotManager] pathfinder plugin load failed:', e);
           }
 
           resolve();
@@ -729,17 +718,13 @@ class BotManager {
         // Delay any auto actions to avoid suspicious packets on lobby scanning phase
         setTimeout(() => {
           if (botData.status !== 'online') return;
-          const ae = bot.autoEat || bot.autoeat;
-          if (ae) {
+          const ae = bot.autoEat;
+          if (ae && typeof ae.enableAuto === 'function') {
             try {
-              if (typeof ae.enable === 'function') {
-                ae.enable();
-              } else if (ae.options) {
-                ae.options.checkHealth = true;
-              }
+              ae.enableAuto();
               this.emitChatMessage(botData.id, 'system', '🍕 Otomatik yemek yeme aktif edildi.');
             } catch (e) {
-              console.warn('[BotManager] Autoeat toggle:', e?.message || e);
+              console.warn('[BotManager] Autoeat enableAuto():', e?.message || e);
             }
           }
         }, 6000); // 6 seconds safe delay to pass lobby scans
@@ -1306,26 +1291,20 @@ class BotManager {
 
             // Uygun aleti eline al
             if (bot.inventory) {
-              let tool = null;
-              if (bot.pathfinder && typeof bot.pathfinder.bestHarvestTool === 'function') {
-                tool = bot.pathfinder.bestHarvestTool(block);
-              }
-              if (!tool) {
-                tool = bot.inventory.items().find(item => {
-                  const bName = block.name.toLowerCase();
-                  const iName = item.name.toLowerCase();
-                  if (bName.includes('stone') || bName.includes('ore') || bName.includes('obsidian') || bName.includes('cobble') || bName.includes('brick') || bName.includes('terracotta') || bName.includes('iron') || bName.includes('gold') || bName.includes('diamond') || bName.includes('deepslate')) {
-                    return iName.includes('pickaxe');
-                  }
-                  if (bName.includes('wood') || bName.includes('log') || bName.includes('plank') || bName.includes('chest') || bName.includes('door') || bName.includes('fence')) {
-                    return iName.includes('axe') && !iName.includes('pickaxe');
-                  }
-                  if (bName.includes('dirt') || bName.includes('grass') || bName.includes('sand') || bName.includes('gravel') || bName.includes('clay') || bName.includes('soul_')) {
-                    return iName.includes('shovel');
-                  }
-                  return false;
-                });
-              }
+              const tool = bot.inventory.items().find(item => {
+                const bName = block.name.toLowerCase();
+                const iName = item.name.toLowerCase();
+                if (bName.includes('stone') || bName.includes('ore') || bName.includes('obsidian') || bName.includes('cobble') || bName.includes('brick') || bName.includes('terracotta') || bName.includes('iron') || bName.includes('gold') || bName.includes('diamond') || bName.includes('deepslate')) {
+                  return iName.includes('pickaxe');
+                }
+                if (bName.includes('wood') || bName.includes('log') || bName.includes('plank') || bName.includes('chest') || bName.includes('door') || bName.includes('fence')) {
+                  return iName.includes('axe') && !iName.includes('pickaxe');
+                }
+                if (bName.includes('dirt') || bName.includes('grass') || bName.includes('sand') || bName.includes('gravel') || bName.includes('clay') || bName.includes('soul_')) {
+                  return iName.includes('shovel');
+                }
+                return false;
+              });
               if (tool) {
                 try {
                   await bot.equip(tool, 'hand');
